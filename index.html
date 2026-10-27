@@ -136,26 +136,88 @@ ul.moblist li:first-child{border-top:0}
 .destmobs > span{font-size:12px;color:var(--mute);margin-right:2px}
 .destmobs button{font:inherit;font-size:12px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
 .destmobs button:hover{border-color:var(--gold);color:var(--gold)}
+
+/* v1.8 真實地圖：縮放拖曳 */
+.mapview{position:relative;height:clamp(260px,58vh,820px);overflow:hidden;background:#0f2a3a;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.mapview.drag{cursor:grabbing}
+@media (min-aspect-ratio:1/1) and (min-width:821px){.mapview{height:clamp(320px,calc(100vh - 230px),900px)}}
+.maplayer{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+.maplayer img{display:block;max-width:none;pointer-events:none;-webkit-user-drag:none;image-rendering:auto}
+.mapview .mapover{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.maptop{position:absolute;top:8px;left:8px;right:8px;display:flex;flex-wrap:wrap;gap:6px;justify-content:space-between;pointer-events:none}
+.maptop .tapmode{position:static;pointer-events:auto}
+.mapctl{position:absolute;right:8px;bottom:8px;display:flex;flex-direction:column;gap:6px}
+.mapctl button{width:40px;height:40px;border-radius:6px;border:1px solid var(--line);background:rgba(18,16,13,.88);color:var(--gold);font-size:18px;cursor:pointer}
+.mapmissing{position:absolute;left:12px;right:60px;bottom:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border-radius:6px;background:rgba(18,16,13,.92);border:1px solid var(--gold);font-size:13px}
+.locbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 10px;border-top:1px solid var(--line);background:var(--panel)}
+.locbar .inp{flex:1 1 200px;min-width:0;padding:8px 10px;font-size:15px}
+.locinfo{flex:1 1 100%;font-size:12.5px;color:var(--mute)}
+.locinfo b{color:var(--ink)}
+.mapover .node circle{stroke:#120e09;stroke-width:2.5}
+.mapover .n-town circle{fill:var(--gold)}
+.mapover .n-spot circle{fill:#d8cbb4}
+.mapover .node.on-route circle{fill:var(--walk)}
+.mapover .node.is-from circle{fill:var(--from)}
+.mapover .node.is-to circle{fill:var(--to)}
+.mapover .node text{font-family:var(--f-body);font-size:13px;font-weight:700;fill:#fff8e6;paint-order:stroke;stroke:#120e09;stroke-width:4px;stroke-linejoin:round}
+.mapover .n-spot text{font-size:12px;font-weight:500;display:none}
+.mapover .node.lbl text,.mapover .node.on-route text,.mapover .node.is-from text,.mapover .node.is-to text{display:block}
+.mapover .seg{fill:none;stroke-linecap:round}
+.mapover .seg.walk{stroke:var(--walk);stroke-width:5;filter:drop-shadow(0 0 2px #000)}
+.mapover .seg.tele{stroke:var(--tele);stroke-width:4}
+.mapover .seg.boat{stroke:var(--boat);stroke-width:4}
+.mapover .xmap{font-family:var(--f-body);font-size:12px;font-weight:700;fill:var(--tele);paint-order:stroke;stroke:#120e09;stroke-width:4px}
+.mapover .me circle.dot{fill:#44c2ff;stroke:#fff;stroke-width:3}
+.mapover .me circle.ring{fill:none;stroke:#44c2ff;stroke-width:2;opacity:.7}
+@media (prefers-reduced-motion:no-preference){.mapover .me circle.ring{animation:ping 1.6s ease-out infinite;transform-box:fill-box;transform-origin:center}}
+@keyframes ping{from{transform:scale(.6);opacity:.9}to{transform:scale(2.2);opacity:0}}
 </style>
 
 <style>body{margin:0}[hidden]{display:none!important}</style></head><body><div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="ver">v1.7 · 2026-10-27</span>
+    <span class="ver">v1.8 · 2026-10-28</span>
   </header>
 
   <div class="main">
     <div class="mapbox" id="mapbox">
-      <div class="tapmode" role="group" aria-label="點地圖設定">
-        <button id="tapFrom" aria-pressed="false">點圖設出發</button>
-        <button id="tapTo" aria-pressed="true">點圖設目的</button>
+      <div class="mapview" id="mapview">
+        <div class="maplayer" id="mapLayer"><img id="mapImg" alt="" draggable="false" referrerpolicy="no-referrer"></div>
+        <svg id="map" class="mapover" role="img" aria-label="天堂地圖"></svg>
+        <div class="maptop">
+          <div class="tapmode" role="group" aria-label="地圖切換">
+            <button id="mapMain" aria-pressed="true">本土</button>
+            <button id="mapTi" aria-pressed="false">說話之島</button>
+          </div>
+          <div class="tapmode" role="group" aria-label="點地圖設定">
+            <button id="tapFrom" aria-pressed="false">點圖設出發</button>
+            <button id="tapTo" aria-pressed="true">點圖設目的</button>
+          </div>
+        </div>
+        <div class="mapctl">
+          <button id="zIn" aria-label="放大">＋</button>
+          <button id="zOut" aria-label="縮小">－</button>
+          <button id="zFit" aria-label="顯示整條路線">⤢</button>
+          <button id="zMe" aria-label="回到我的位置">◎</button>
+        </div>
+        <div class="mapmissing" id="mapMissing" hidden>
+          <span id="mapMissTxt">地圖圖片載入失敗。</span>
+          <label class="go" for="mapFile">選擇地圖檔</label>
+          <input id="mapFile" type="file" accept="image/*" multiple hidden>
+        </div>
       </div>
-      <svg id="map" viewBox="0 0 1240 760" role="img" aria-label="亞丁大陸示意地圖"></svg>
+      <div class="locbar">
+        <input class="inp" id="locIn" inputmode="numeric" placeholder="輸入 /loc 座標，例：33430 32815" autocomplete="off">
+        <button class="go" id="locGo">標示我的位置</button>
+        <button class="go" id="locFrom" hidden>從這裡出發</button>
+        <span class="locinfo" id="locInfo"></span>
+      </div>
       <div class="legend">
         <span><i style="border-color:var(--walk)"></i>步行</span>
         <span><i style="border-color:var(--tele);border-top-style:dotted"></i>傳送師</span>
         <span><i style="border-color:var(--boat);border-top-style:dashed"></i>搭船</span>
-        <span>● 金點＝村莊（有傳送師）　● 灰點＝地監／獵場</span>
+        <span>● 金點＝村莊　● 灰點＝地監／獵場　◎ 我的位置</span>
+        <span>雙指或滾輪縮放、拖曳移動，點空白處顯示該處座標。地圖：lcinfo.io</span>
       </div>
     </div>
 
@@ -208,7 +270,7 @@ const MOB=[{"k":"frog","n":"青蛙","l":1,"u":0,"b":0,"r":[378174,876039,789570,
 // ===== 地點資料（座標取自天堂1玩家整理之 /loc 座標）=====
 // t: town=村莊(有傳送師) / spot=地監、獵場 ; px,py = 僅繪圖用位置（另一張地圖的地區）
 const N = [
- {id:'ti',n:'說話之島',x:32576,y:32945,t:'town',px:32120,py:33380,port:'說話之島港口 (32632, 32969)',a:'說話之島'},
+ {id:'ti',n:'說話之島',x:32576,y:32945,t:'town',map:'ti',port:'說話之島港口 (32632, 32969)',a:'說話之島'},
  {id:'gludin',n:'古魯丁村',x:32610,y:32766,t:'town',tp:'(32610, 32732)',port:'古魯丁港口 (32544, 32728)',a:'古魯丁'},
  {id:'kent',n:'肯特村',x:33072,y:32799,t:'town',tp:'(33050, 32782)',a:'肯特'},
  {id:'woodbec',n:'風木村',x:32611,y:33185,t:'town',a:'風木'},
@@ -219,12 +281,12 @@ const N = [
  {id:'werldern',n:'威頓村',x:33724,y:32488,t:'town',tp:'(33709, 32498)',a:'威頓'},
  {id:'oren',n:'歐瑞村',x:34057,y:32285,t:'town',a:'歐瑞'},
  {id:'aden',n:'亞丁城鎮',x:34124,y:33146,t:'town',a:'亞丁'},
- {id:'silent',n:'沉默洞穴（黑妖村）',x:32876,y:32910,t:'town',px:32120,py:32260,a:'沉默洞穴',only:'傳送師'},
+ {id:'silent',n:'沉默洞穴（黑妖村）',x:32876,y:32910,t:'town',map:'under',a:'沉默洞穴',only:'傳送師'},
  {id:'behemoth',n:'貝希摩斯（龍騎士村）',x:33634,y:32405,t:'town',a:'威頓'},
  {id:'hyperia',n:'希培利亞（幻術士村）',x:34094,y:32167,t:'town',a:'歐瑞'},
 
- {id:'ti_adv',n:'說話之島 冒險洞穴',x:32477,y:32852,t:'spot',px:32040,py:33300,a:'說話之島',map:'ti'},
- {id:'ti_gant',n:'說話之島 甘特洞穴',x:32670,y:32790,t:'spot',px:32190,py:33300,a:'說話之島',map:'ti'},
+ {id:'ti_adv',n:'說話之島 冒險洞穴',x:32477,y:32852,t:'spot',a:'說話之島',map:'ti'},
+ {id:'ti_gant',n:'說話之島 甘特洞穴',x:32670,y:32790,t:'spot',a:'說話之島',map:'ti'},
  {id:'gl_dun',n:'古魯丁地監',x:32728,y:32928,t:'spot',a:'古魯丁'},
  {id:'evil',n:'邪惡神殿',x:32886,y:32652,t:'spot',a:'古魯丁'},
  {id:'sleep',n:'眠龍洞穴',x:32938,y:32283,t:'spot',a:'妖魔森林'},
@@ -244,7 +306,7 @@ const N = [
  {id:'cyclops',n:'獨眼巨人區',x:33706,y:32928,t:'spot',a:'海音'},
  {id:'hn_dun',n:'龍眸之塔（海音地監）',x:33627,y:33506,t:'spot',a:'海音'},
  {id:'croc',n:'霧月島（鱷魚島）',x:33500,y:33206,t:'spot',a:'海音'},
- {id:'forgot',n:'遺忘之島',x:32622,y:32692,t:'spot',px:33240,py:33500,a:'海音',map:'forgot'},
+ {id:'forgot',n:'遺忘之島',x:32622,y:32692,t:'spot',a:'海音',map:'forgot'},
  {id:'fire',n:'火龍窟（火龍窟之橋）',x:33660,y:32465,t:'spot',a:'威頓'},
  {id:'dwarf',n:'侏儒城（鐵門）',x:33614,y:32408,t:'spot',a:'威頓'},
  {id:'ivory',n:'象牙塔',x:34041,y:32157,t:'spot',a:'歐瑞'},
@@ -308,51 +370,106 @@ function dir(a,b){const dx=b.x-a.x,dy=b.y-a.y;const ang=Math.atan2(-dy,dx)*180/M
   const names=['東','東北','北','西北','西','西南','南','東南'];return names[(Math.round(ang/45)+8)%8];}
 const c=o=>`<span class="coord" data-c="${o.x} ${o.y}">(${o.x}, ${o.y})</span>`;
 
-// ===== 地圖繪製 =====
-const X0=31950,Y0=32080,S=0.5;
-const P=o=>[((o.px??o.x)-X0)*S,((o.py??o.y)-Y0)*S];
-const svg=document.getElementById('map');
+// ===== 地圖繪製（lcinfo.io 地圖＋座標換算）=====
+const MAPS={
+  main:{name:'本土',w:3136,h:1600,src:'https://www.lcinfo.io/images/map/fullmap.png',o:[33424.107,31270.457],sx:1,sy:1},
+  ti:{name:'說話之島',w:3008,h:1408,src:'https://www.lcinfo.io/images/map/island.png',o:[32535,32660],sx:3008/716,sy:1408/350}
+};
+const UDX=1.001,UDY=0.998,VDX=-0.501,VDY=0.505,DET=UDX*VDY-UDY*VDX;
+function toPx(m,X,Y){const M=MAPS[m],dx=X-M.o[0],dy=Y-M.o[1];return [(dx*UDX+dy*UDY)*M.sx,(dx*VDX+dy*VDY)*M.sy]}
+function toLoc(m,px,py){const M=MAPS[m],a=px/M.sx,b=py/M.sy;return [Math.round(M.o[0]+(a*VDY-b*UDY)/DET),Math.round(M.o[1]+(b*UDX-a*VDX)/DET)]}
+const nodeMap=o=>o.map==='ti'?'ti':(o.map?null:'main');
 const NS='http://www.w3.org/2000/svg';
+const svg=document.getElementById('map'),mv=document.getElementById('mapview'),layer=document.getElementById('mapLayer'),mimg=document.getElementById('mapImg');
 function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);(parent||svg).appendChild(e);return e;}
-function drawBase(){
-  // 大陸輪廓（示意）
-  el('path',{d:'M 300 230 C 330 120 520 60 700 70 C 900 40 1120 40 1190 120 C 1230 220 1200 380 1190 520 C 1180 640 1120 720 980 730 C 820 740 700 735 600 740 C 470 745 330 740 300 650 C 270 560 300 470 280 390 C 260 320 280 280 300 230 Z',fill:'var(--land)',stroke:'#3d3a2a','stroke-width':3});
-  // 說話之島
-  el('ellipse',{cx:(32120-X0)*S,cy:(33330-Y0)*S,rx:110,ry:70,fill:'var(--land)',stroke:'#3d3a2a','stroke-width':3});
-  // 遺忘之島
-  el('ellipse',{cx:(33240-X0)*S,cy:(33500-Y0)*S,rx:60,ry:30,fill:'var(--land)',stroke:'#3d3a2a','stroke-width':3,'stroke-dasharray':'6 6'});
-  // 沉默洞穴（地底）
-  el('rect',{x:(32120-X0)*S-90,y:(32260-Y0)*S-40,width:180,height:80,rx:10,fill:'#1d1a24',stroke:'#4a4160','stroke-width':2,'stroke-dasharray':'6 6'});
-  const lab=(t,x,y)=>{const e=el('text',{x,y,'font-size':17,fill:'var(--mute)','text-anchor':'middle','font-family':'var(--f-body)'});e.textContent=t;};
-  lab('地底・需傳送師',(32120-X0)*S,(32260-Y0)*S+60);
-  lab('海外・示意位置',(33240-X0)*S,(33500-Y0)*S+50);
-  // 道路
-  const rg=el('g',{stroke:'#4b4636','stroke-width':3,'stroke-dasharray':'2 8','stroke-linecap':'round'});
-  ROADS.forEach(([a,b])=>{const [x1,y1]=P(byId[a]),[x2,y2]=P(byId[b]);el('line',{x1,y1,x2,y2},rg)});
+let curMap='main',lastPath=[],me=null,userMoved=false;const VIEW={};
+const cw=()=>mv.clientWidth||600,ch=()=>mv.clientHeight||400;
+function fitScale(m){const M=MAPS[m];return Math.min(cw()/M.w,ch()/M.h)}
+function clampView(){const M=MAPS[curMap],v=VIEW[curMap],f=fitScale(curMap);v.s=Math.max(f*0.8,Math.min(v.s,3));
+  const W=M.w*v.s,H=M.h*v.s,mx=cw()*0.5,my=ch()*0.5;
+  v.tx=W<cw()?(cw()-W)/2:Math.min(mx,Math.max(cw()-W-mx,v.tx));v.ty=H<ch()?(ch()-H)/2:Math.min(my,Math.max(ch()-H-my,v.ty));}
+function fitAll(){const v=VIEW[curMap]={s:fitScale(curMap),tx:0,ty:0};clampView();}
+function fitPoints(pts){if(!pts.length){fitAll();return}const M=MAPS[curMap];let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;pts.forEach(([x,y])=>{x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y)});
+  const pad=70,w=Math.max(x1-x0,1),h=Math.max(y1-y0,1);let s=Math.min((cw()-pad*2)/w,(ch()-pad*2)/h);s=Math.min(s,pts.length===1?0.9:1.2);
+  VIEW[curMap]={s,tx:cw()/2-(x0+x1)/2*s,ty:ch()/2-(y0+y1)/2*s};clampView();}
+const IDB={db:null,open(){return new Promise(r=>{try{const q=indexedDB.open('l1maps',1);q.onupgradeneeded=()=>q.result.createObjectStore('maps');q.onsuccess=()=>{this.db=q.result;r(this.db)};q.onerror=()=>r(null)}catch(e){r(null)}})},
+  async get(k){const d=this.db||await this.open();if(!d)return null;return new Promise(r=>{try{const q=d.transaction('maps').objectStore('maps').get(k);q.onsuccess=()=>r(q.result||null);q.onerror=()=>r(null)}catch(e){r(null)}})},
+  async put(k,v){const d=this.db||await this.open();if(!d)return;try{d.transaction('maps','readwrite').objectStore('maps').put(v,k)}catch(e){}}};
+const IMGURL={};
+async function loadImg(m){const M=MAPS[m];document.getElementById('mapMissing').hidden=true;mimg.style.width=M.w+'px';mimg.style.height=M.h+'px';
+  if(IMGURL[m]){mimg.src=IMGURL[m];return}
+  const blob=await IDB.get(m);if(m!==curMap)return;
+  if(blob){IMGURL[m]=URL.createObjectURL(blob);mimg.src=IMGURL[m];return}
+  const im=new Image();try{im.referrerPolicy='no-referrer'}catch(e){}
+  im.onload=()=>{IMGURL[m]=M.src;if(curMap===m)mimg.src=M.src};im.onerror=()=>{if(curMap===m)showMissing()};im.src=M.src;}
+function showMissing(){mimg.style.visibility='hidden';document.getElementById('mapMissTxt').textContent=`${MAPS[curMap].name}地圖圖片載入失敗（可能被網站阻擋）。選一次地圖檔，之後會記住：`;document.getElementById('mapMissing').hidden=false}
+mimg.addEventListener('load',()=>{document.getElementById('mapMissing').hidden=true;mimg.style.visibility='visible'});
+
+document.getElementById('mapFile').addEventListener('change',e=>{[...e.target.files].forEach(f=>{const u=URL.createObjectURL(f),im=new Image();im.onload=()=>{
+  const k=im.naturalWidth===3008?'ti':im.naturalWidth===3136?'main':curMap;IMGURL[k]=u;IDB.put(k,f);if(k===curMap){mimg.src=u}showToast('已記住'+MAPS[k].name+'地圖');};im.src=u});e.target.value='';});
+function setMap(m,refit){if(!MAPS[m])return;curMap=m;document.getElementById('mapMain').setAttribute('aria-pressed',m==='main');document.getElementById('mapTi').setAttribute('aria-pressed',m==='ti');
+  loadImg(m);if(refit||!VIEW[m])focusRoute();else draw();}
+function focusRoute(){const pts=[];const add=o=>{if(o&&nodeMap(o)===curMap)pts.push(toPx(curMap,o.x,o.y))};
+  lastPath.forEach(s=>{add(byId[s.a]);add(byId[s.b])});if(!lastPath.length){add(byId[fromSel.value]);add(byId[toSel.value])}
+  userMoved=false;fitPoints(pts);draw();}
+function scr(px,py){const v=VIEW[curMap];return [v.tx+px*v.s,v.ty+py*v.s]}
+function draw(){const v=VIEW[curMap];if(!v)return;layer.style.transform=`translate(${v.tx}px,${v.ty}px) scale(${v.s})`;
+  svg.setAttribute('viewBox',`0 0 ${cw()} ${ch()}`);svg.innerHTML='';
+  const f=fromSel.value,t=toSel.value,ids=new Set();lastPath.forEach(s=>{ids.add(s.a);ids.add(s.b)});
+  const R=el('g',{}),NG=el('g',{});
+  lastPath.forEach(s=>{const A=byId[s.a],B=byId[s.b],ma=nodeMap(A),mb=nodeMap(B);
+    if(ma===curMap&&mb===curMap){const [x1,y1]=scr(...toPx(curMap,A.x,A.y)),[x2,y2]=scr(...toPx(curMap,B.x,B.y));
+      if(s.type==='walk')el('line',{x1,y1,x2,y2,class:'seg walk'},R);
+      else{const mx=(x1+x2)/2,my=(y1+y2)/2,k=s.type==='tele'?0.25:0.12;el('path',{d:`M${x1} ${y1} Q${mx-(y2-y1)*k} ${my+(x2-x1)*k} ${x2} ${y2}`,class:`seg ${s.type}`},R)}}
+    else if(ma===curMap||mb===curMap){const here=ma===curMap?A:B,there=ma===curMap?B:A,[x,y]=scr(...toPx(curMap,here.x,here.y));
+      const txt=(ma===curMap?'⇢ ':'⇠ ')+(s.type==='boat'?'搭船':'傳送')+(ma===curMap?'到 ':'自 ')+there.n.replace(/（.*）/,'');const e=el('text',{x:x+12,y:y-12,class:'xmap'},R);e.textContent=txt;}});
+  const lbl=v.s>=0.55;
+  [...N].filter(o=>nodeMap(o)===curMap).sort((a,b)=>(a.t==='spot'?0:1)-(b.t==='spot'?0:1)||(a.id===f||a.id===t?1:0)-(b.id===f||b.id===t?1:0)).forEach(o=>{
+    const [x,y]=scr(...toPx(curMap,o.x,o.y));if(x<-60||y<-60||x>cw()+60||y>ch()+60)return;
+    const cls=['node','n-'+o.t];if(ids.has(o.id))cls.push('on-route');if(o.id===f)cls.push('is-from');if(o.id===t)cls.push('is-to');if(lbl)cls.push('lbl');
+    const g=el('g',{class:cls.join(' ')},NG),big=o.id===f||o.id===t;
+    el('circle',{cx:x,cy:y,r:big?9:o.t==='town'?7:5},g);
+    const right=x<cw()-120,tx=el('text',{x:x+(right?11:-11),y:y+4,'text-anchor':right?'start':'end'},g);tx.textContent=o.n;});
+  if(me&&me.m===curMap){const [x,y]=scr(...toPx(curMap,me.x,me.y)),g=el('g',{class:'me'});el('circle',{cx:x,cy:y,r:10,class:'ring'},g);el('circle',{cx:x,cy:y,r:7,class:'dot'},g);}
 }
-const routeLayer=()=>svg.querySelector('#routeLayer');
-function drawNodes(){
-  el('g',{id:'routeLayer'});
-  const ng=el('g',{id:'nodes'});
-  [...N].sort((a,b)=>a.t===b.t?0:a.t==='spot'?-1:1).forEach(o=>{
-    const [x,y]=P(o);
-    const g=el('g',{class:`node n-${o.t}`,'data-id':o.id,tabindex:0},ng);
-    el('circle',{cx:x,cy:y,r:o.t==='town'?11:7},g);
-    const right=x<1000;
-    const t=el('text',{x:x+(right?16:-16),y:y+8,'text-anchor':right?'start':'end'},g);t.textContent=o.n;
-    const ti=el('title',{},g);ti.textContent=o.n;
-  });
-}
-function drawRoute(path){
-  const L=routeLayer();L.innerHTML='';
-  path.forEach(s=>{
-    const [x1,y1]=P(byId[s.a]),[x2,y2]=P(byId[s.b]);
-    if(s.type==='walk'){el('line',{x1,y1,x2,y2,class:'seg walk'},L)}
-    else{const mx=(x1+x2)/2,my=(y1+y2)/2,len=Math.hypot(x2-x1,y2-y1),k=s.type==='tele'?0.25:0.12;
-      const cx=mx-(y2-y1)/len*len*k,cy=my+(x2-x1)/len*len*k;
-      el('path',{d:`M${x1} ${y1} Q${cx} ${cy} ${x2} ${y2}`,class:`seg ${s.type}`},L)}
-  });
-}
+// 手勢：拖曳、雙指縮放、滾輪、點擊
+const PT=new Map();let gest=null;
+function zoomAt(k,cx,cy){userMoved=true;const v=VIEW[curMap],ns=Math.max(fitScale(curMap)*0.8,Math.min(v.s*k,3));const r=ns/v.s;v.tx=cx-(cx-v.tx)*r;v.ty=cy-(cy-v.ty)*r;v.s=ns;clampView();draw();}
+function rel(e){const b=mv.getBoundingClientRect();return [e.clientX-b.left,e.clientY-b.top]}
+mv.addEventListener('pointerdown',e=>{if(e.target.closest('button,label,input,.mapmissing'))return;try{mv.setPointerCapture(e.pointerId)}catch(_){}PT.set(e.pointerId,rel(e));mv.classList.add('drag');
+  const v=VIEW[curMap];if(PT.size===1)gest={t:Date.now(),p0:rel(e),moved:false,tx:v.tx,ty:v.ty};else if(PT.size===2){const [a,b]=[...PT.values()];gest={pinch:true,d:Math.hypot(a[0]-b[0],a[1]-b[1]),moved:true,s:v.s,tx:v.tx,ty:v.ty,c:[(a[0]+b[0])/2,(a[1]+b[1])/2]}}});
+mv.addEventListener('pointermove',e=>{if(!PT.has(e.pointerId)||!gest)return;PT.set(e.pointerId,rel(e));const v=VIEW[curMap];
+  if(gest.pinch&&PT.size>=2){const [a,b]=[...PT.values()],d=Math.hypot(a[0]-b[0],a[1]-b[1]),c=[(a[0]+b[0])/2,(a[1]+b[1])/2];
+    userMoved=true;const ns=Math.max(fitScale(curMap)*0.8,Math.min(gest.s*d/gest.d,3)),r=ns/gest.s;v.s=ns;v.tx=c[0]-(gest.c[0]-gest.tx)*r;v.ty=c[1]-(gest.c[1]-gest.ty)*r;clampView();draw();}
+  else if(!gest.pinch){const p=rel(e),dx=p[0]-gest.p0[0],dy=p[1]-gest.p0[1];if(!gest.moved&&Math.hypot(dx,dy)<6)return;gest.moved=true;userMoved=true;v.tx=gest.tx+dx;v.ty=gest.ty+dy;clampView();draw();}});
+function endPt(e){if(!PT.has(e.pointerId))return;PT.delete(e.pointerId);if(PT.size===0){mv.classList.remove('drag');if(gest&&!gest.moved&&Date.now()-gest.t<500)tapAt(...gest.p0);gest=null}
+  else if(PT.size===1){const v=VIEW[curMap],p=[...PT.values()][0];gest={t:0,p0:p,moved:true,tx:v.tx,ty:v.ty}}}
+mv.addEventListener('pointerup',endPt);mv.addEventListener('pointercancel',endPt);
+mv.addEventListener('wheel',e=>{e.preventDefault();const [x,y]=rel(e);zoomAt(e.deltaY<0?1.2:1/1.2,x,y)},{passive:false});
+mv.addEventListener('dblclick',e=>{if(e.target.closest('button,label,.mapmissing'))return;const [x,y]=rel(e);zoomAt(2,x,y)});
+function tapAt(x,y){let best=null,bd=22;N.forEach(o=>{if(nodeMap(o)!==curMap)return;const [sx,sy]=scr(...toPx(curMap,o.x,o.y)),d=Math.hypot(sx-x,sy-y);if(d<bd){bd=d;best=o}});
+  if(best){pick(best.id);return}const v=VIEW[curMap],[X,Y]=toLoc(curMap,(x-v.tx)/v.s,(y-v.ty)/v.s);showToast(`這裡約 (${X}, ${Y})`);}
+document.getElementById('zIn').addEventListener('click',()=>zoomAt(1.5,cw()/2,ch()/2));
+document.getElementById('zOut').addEventListener('click',()=>zoomAt(1/1.5,cw()/2,ch()/2));
+document.getElementById('zFit').addEventListener('click',()=>focusRoute());
+document.getElementById('mapMain').addEventListener('click',()=>setMap('main',true));
+document.getElementById('mapTi').addEventListener('click',()=>setMap('ti',true));
+if(window.ResizeObserver){let rw=0,rh=0;new ResizeObserver(()=>{if(Math.abs(cw()-rw)<2&&Math.abs(ch()-rh)<2)return;const first=!rw;rw=cw();rh=ch();if(first||!VIEW[curMap]||!userMoved)focusRoute();else{clampView();draw()}}).observe(mv)}
+// 我的位置
+function parseLoc(t){const m=String(t).match(/(\d{5})\D+(\d{5})(?:\D+(\d{1,4}))?/);if(!m)return null;return {x:+m[1],y:+m[2],id:m[3]!=null?+m[3]:null}}
+function inMap(m,X,Y){const [px,py]=toPx(m,X,Y),M=MAPS[m];return px>=0&&py>=0&&px<=M.w&&py<=M.h}
+function setMe(loc,quiet){let m=loc.id===0?'ti':loc.id===4?'main':null;
+  if(m===null){const a=inMap(curMap,loc.x,loc.y),other=curMap==='main'?'ti':'main';m=a?curMap:inMap(other,loc.x,loc.y)?other:curMap;}
+  me={x:loc.x,y:loc.y,m};try{localStorage.setItem('l1me',JSON.stringify(me))}catch(e){}
+  let best=null,bd=1e9;N.forEach(o=>{if(nodeMap(o)!==m)return;const d=dist(o,me);if(d<bd){bd=d;best=o}});me.near=best&&best.id;
+  document.getElementById('locInfo').innerHTML=`我在 <b>${MAPS[m].name} (${me.x}, ${me.y})</b>${best?`，最近：<b>${esc(best.n)}</b> `+(bd<3?'就在這裡':`約 ${bd} 格（往${dir(me,best)}）`):''}`;
+  document.getElementById('locFrom').hidden=!best;
+  if(!quiet){if(curMap!==m){curMap=m;setMap(m,false)}const v=VIEW[m]||(fitAll(),VIEW[m]);const [px,py]=toPx(m,me.x,me.y);userMoved=true;v.s=Math.max(v.s,0.8);v.tx=cw()/2-px*v.s;v.ty=ch()/2-py*v.s;clampView();draw();}
+  else draw();}
+document.getElementById('locGo').addEventListener('click',()=>{const l=parseLoc(document.getElementById('locIn').value);if(!l){showToast('請輸入兩組 5 位數座標，例如 33430 32815');return}setMe(l)});
+document.getElementById('locIn').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById('locGo').click()}});
+document.getElementById('locFrom').addEventListener('click',()=>{if(me&&me.near){fromSel.value=me.near;render();showToast('已設為出發地：'+byId[me.near].n)}});
+document.getElementById('zMe').addEventListener('click',()=>{if(me)setMe(me);else{document.getElementById('locIn').focus();showToast('先輸入 /loc 座標')}});
 
 // ===== 選單 =====
 const fromSel=document.getElementById('from'),toSel=document.getElementById('to');
@@ -382,25 +499,17 @@ function render(){
   const f=fromSel.value,t=toSel.value;destMobs(t);
   document.getElementById('mFast').setAttribute('aria-pressed',mode==='fast');
   document.getElementById('mWalk').setAttribute('aria-pressed',mode==='walk');
-  svg.querySelectorAll('.node').forEach(n=>n.classList.remove('on-route','is-from','is-to'));
   const sum=document.getElementById('summary'),ol=document.getElementById('steps');
-  if(f===t){sum.innerHTML='<span class="chip k">出發地與目的地相同</span>';ol.innerHTML='';routeLayer().innerHTML='';mark(f,t,[]);save();return;}
+  if(f===t){sum.innerHTML='<span class="chip k">出發地與目的地相同</span>';ol.innerHTML='';lastPath=[];showRouteMap();save();return;}
   const path=route(f,t,mode);
-  if(!path){sum.innerHTML='<span class="chip k">此模式下找不到路線</span>';ol.innerHTML=`<li><span class="ico tele">!</span><div class="st-d">${byId[t].n}或${byId[f].n}只能靠傳送師進出，請改用「最快」模式。</div></li>`;routeLayer().innerHTML='';mark(f,t,[]);save();return;}
+  if(!path){sum.innerHTML='<span class="chip k">此模式下找不到路線</span>';ol.innerHTML=`<li><span class="ico tele">!</span><div class="st-d">${byId[t].n}或${byId[f].n}只能靠傳送師進出，請改用「最快」模式。</div></li>`;lastPath=[];showRouteMap();save();return;}
   let walk=0,tele=0,boat=0;path.forEach(s=>{if(s.type==='walk')walk+=dist(byId[s.a],byId[s.b]);if(s.type==='tele')tele++;if(s.type==='boat')boat++});
   sum.innerHTML=`<span class="chip k">${path.length} 段</span><span class="chip">步行約 ${walk} 格</span>${tele?`<span class="chip">傳送 ${tele} 次</span>`:''}${boat?`<span class="chip">搭船 ${boat} 次</span>`:''}<span class="chip">目的地 ${byId[t].x}, ${byId[t].y}</span>`;
   ol.innerHTML=path.map((s,i)=>{const h=stepHTML(s,i,i===path.length-1);return `<li><span class="ico ${h.ico}">${h.k}</span><div><div class="st-t">${h.t}</div><div class="st-d">${h.d}</div></div></li>`}).join('');
-  drawRoute(path);mark(f,t,path);save();
+  lastPath=path;showRouteMap();save();
 }
-function mark(f,t,path){
-  const ids=new Set();path.forEach(s=>{ids.add(s.a);ids.add(s.b)});
-  svg.querySelectorAll('.node').forEach(n=>{const id=n.dataset.id;if(ids.has(id))n.classList.add('on-route');if(id===f)n.classList.add('is-from');if(id===t)n.classList.add('is-to')});
-  // 讓起訖點畫在最上層
-  const ng=svg.querySelector('#nodes');[f,t].forEach(id=>{const n=ng.querySelector(`[data-id="${id}"]`);if(n)ng.appendChild(n)});
-}
-
+function showRouteMap(){const T=byId[toSel.value],F=byId[fromSel.value];const m=nodeMap(T)||nodeMap(F)||curMap;if(m!==curMap){curMap=m;setMap(m,true)}else focusRoute();}
 // ===== 事件 =====
-drawBase();drawNodes();
 fromSel.addEventListener('change',render);toSel.addEventListener('change',render);
 document.getElementById('swap').addEventListener('click',()=>{const a=fromSel.value;fromSel.value=toSel.value;toSel.value=a;render()});
 document.getElementById('mFast').addEventListener('click',()=>{mode='fast';render()});
@@ -410,8 +519,6 @@ const tf=document.getElementById('tapFrom'),tt=document.getElementById('tapTo');
 tf.addEventListener('click',()=>{tap='from';tf.setAttribute('aria-pressed',true);tt.setAttribute('aria-pressed',false)});
 tt.addEventListener('click',()=>{tap='to';tt.setAttribute('aria-pressed',true);tf.setAttribute('aria-pressed',false)});
 function pick(id){(tap==='from'?fromSel:toSel).value=id;render()}
-svg.addEventListener('click',e=>{const n=e.target.closest('.node');if(n)pick(n.dataset.id)});
-svg.addEventListener('keydown',e=>{const n=e.target.closest('.node');if(n&&(e.key==='Enter'||e.key===' ')){e.preventDefault();pick(n.dataset.id)}});
 const toast=document.getElementById('toast');let tm;
 function showToast(m){toast.textContent=m;toast.classList.add('on');clearTimeout(tm);tm=setTimeout(()=>toast.classList.remove('on'),1600)}
 document.addEventListener('click',e=>{const s=e.target.closest('.coord');if(!s)return;const txt=s.dataset.c;
@@ -472,6 +579,8 @@ document.getElementById('tabMob').addEventListener('click',e=>{
 document.getElementById('destMobs').addEventListener('click',e=>{const b=e.target.closest('button[data-mk]');if(b)openMob(b.dataset.mk)});
 renderMobList();
 try{if(localStorage.getItem('l1tab')==='mob')showTab('mob')}catch(e){}
+loadImg('main');
+try{const m=JSON.parse(localStorage.getItem('l1me')||'null');if(m&&m.x){document.getElementById('locIn').value=m.x+' '+m.y;me=m;setTimeout(()=>setMe(m,true),0)}}catch(e){}
 render();
 </script>
 </body></html>
