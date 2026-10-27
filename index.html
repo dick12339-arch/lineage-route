@@ -141,11 +141,11 @@ ul.moblist li:first-child{border-top:0}
 <style>body{margin:0}[hidden]{display:none!important}</style></head><body><div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="ver">v1.6 · 2026-10-27</span>
+    <span class="ver">v1.7 · 2026-10-27</span>
   </header>
 
   <div class="main">
-    <div class="mapbox">
+    <div class="mapbox" id="mapbox">
       <div class="tapmode" role="group" aria-label="點地圖設定">
         <button id="tapFrom" aria-pressed="false">點圖設出發</button>
         <button id="tapTo" aria-pressed="true">點圖設目的</button>
@@ -450,6 +450,8 @@ function openMob(k){const m=mobByK[k];if(!m)return;const q=mobQ.value.trim(),g=m
    <div class="sec"><h3>掉落物</h3><div class="drops">${m.d.length?m.d.map(([c,it])=>`<div class="dcat"><i>${esc(c)}</i><div>${it.map(x=>`<span class="dropchip">${hl(x,q)}</span>`).join('')}</div></div>`).join(''):'<span class="ms">資料未列出掉落物</span>'}</div></div>`;
   mobBrowse.hidden=true;mobDetail.hidden=false;showTab('mob');mobDetail.scrollIntoView&&mobDetail.scrollIntoView({block:'nearest'});
 }
+function showMap(){const mb=document.getElementById('mapbox');if(!mb)return;try{mb.dispatchEvent(new CustomEvent('l1nav',{bubbles:true,composed:true}))}catch(e){}
+  setTimeout(()=>{try{mb.scrollIntoView({block:'start',behavior:'smooth'})}catch(e){mb.scrollIntoView()}},80);}
 function closeMob(){mobDetail.hidden=true;mobBrowse.hidden=false}
 function showTab(t){const r=t==='route';document.getElementById('tabRoute').hidden=!r;document.getElementById('tabMob').hidden=r;
   document.getElementById('tbRoute').setAttribute('aria-selected',r);document.getElementById('tbMob').setAttribute('aria-selected',!r);try{localStorage.setItem('l1tab',t)}catch(e){}}
@@ -465,7 +467,7 @@ document.getElementById('tabMob').addEventListener('click',e=>{
   const f=e.target.closest('.fchip');if(f){F[f.dataset.f]=!F[f.dataset.f];f.setAttribute('aria-pressed',F[f.dataset.f]);renderMobList();return}
   const b=e.target.closest('.mob');if(b){openMob(b.dataset.k);return}
   if(e.target.closest('#mobBack')){closeMob();return}
-  const g=e.target.closest('.go');if(g){toSel.value=g.dataset.go;showTab('route');render();}
+  const g=e.target.closest('.go');if(g){toSel.value=g.dataset.go;showTab('route');render();showMap();}
 });
 document.getElementById('destMobs').addEventListener('click',e=>{const b=e.target.closest('button[data-mk]');if(b)openMob(b.dataset.mk)});
 renderMobList();
