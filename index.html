@@ -92,7 +92,7 @@ ol.steps li:first-child{border-top:0}
 @keyframes dash{to{stroke-dashoffset:-32}}
 
 /* 分頁＋怪物查詢 */
-.tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px}
 .tabs button{font:inherit;font-size:14px;font-weight:700;padding:7px;border:0;border-radius:4px;background:none;color:var(--mute);cursor:pointer}
 .tabs button[aria-selected="true"]{background:var(--gold);color:#1a140a}
 .tab{display:flex;flex-direction:column;gap:12px;min-width:0}
@@ -131,7 +131,8 @@ ul.moblist li:first-child{border-top:0}
 .dcat{display:grid;grid-template-columns:42px minmax(0,1fr);gap:8px;align-items:start}
 .dcat > i{font-style:normal;font-size:12px;color:var(--mute);padding-top:3px}
 .dcat div{display:flex;flex-wrap:wrap;gap:4px}
-.dropchip{font-size:12.5px;padding:2px 8px;border-radius:4px;background:var(--bg);border:1px solid var(--line)}
+.dropchip{font:inherit;font-size:12.5px;padding:2px 8px;border-radius:4px;background:var(--bg);border:1px solid var(--line);color:var(--ink);cursor:pointer}
+.dropchip:hover{border-color:var(--gold);color:var(--gold)}
 .destmobs{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
 .destmobs > span{font-size:12px;color:var(--mute);margin-right:2px}
 .destmobs button{font:inherit;font-size:12px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
@@ -196,12 +197,40 @@ ul.moblist li:first-child{border-top:0}
 .lgsess button.y{border-color:var(--to);color:var(--to)}
 .lgio summary{cursor:pointer;color:var(--gold);font-size:13px}
 .lgio textarea{margin-block:8px;font-size:12px}
+
+/* v2.0 物品／製作 */
+.tabs button{padding:7px 2px;font-size:13px}
+.itbadge{display:inline-block;font-size:11px;padding:0 6px;border-radius:3px;margin-left:5px;vertical-align:1px;border:1px solid var(--line);color:var(--mute)}
+.itbadge.c{color:var(--gold);border-color:#7a6230}
+.itbadge.m{color:var(--boat);border-color:#2f6b62}
+.rc{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.rc .who{font-size:13px;color:var(--mute)}
+.rc .who b{color:var(--ink)}
+.matl{display:flex;flex-direction:column}
+.mat{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:5px 0;border-top:1px dashed var(--line);font-size:13.5px}
+.mat:first-child{border-top:0}
+.mat button.lnk{font:inherit;background:none;border:0;padding:0;color:var(--ink);text-align:left;cursor:pointer;text-decoration:underline dotted var(--mute);text-underline-offset:3px}
+.mat button.lnk:hover{color:var(--gold)}
+.mat .q{font-variant-numeric:tabular-nums;color:var(--gold);font-weight:700;white-space:nowrap}
+.mat small{display:block;color:var(--mute);font-size:12px}
+.qtyrow{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--mute)}
+.qtyrow .inp{width:90px;padding:6px 8px;font-size:15px}
+.drw{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 0;border-top:1px dashed var(--line);font-size:13px}
+.drw:first-child{border-top:0}
+.drw .lnk{font:inherit;font-weight:700;background:none;border:0;padding:0;color:var(--ink);cursor:pointer;text-align:left}
+.drw .lnk:hover{color:var(--gold)}
+.drw span{display:block;color:var(--mute);font-size:12px}
+.edrow{display:grid;grid-template-columns:minmax(0,1fr) 80px 34px;gap:6px;align-items:center}
+.edrow .inp{padding:7px 8px;font-size:15px}
+.edrow button{height:34px;border-radius:5px;border:1px solid var(--line);background:none;color:var(--mute);cursor:pointer}
+.edbtns{display:flex;flex-wrap:wrap;gap:6px}
+.go.warn{border-color:var(--to);color:var(--to)}
 </style>
 
 <style>body{margin:0}[hidden]{display:none!important}</style></head><body><div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="ver">v1.9 · 2026-10-30</span>
+    <span class="ver">v2.0 · 2026-10-30</span>
   </header>
 
   <div class="main">
@@ -249,8 +278,9 @@ ul.moblist li:first-child{border-top:0}
     <section class="panel" aria-label="路線與怪物">
       <div class="tabs" role="tablist">
         <button role="tab" id="tbRoute" aria-selected="true" aria-controls="tabRoute">路線</button>
-        <button role="tab" id="tbMob" aria-selected="false" aria-controls="tabMob">怪物／掉落</button>
-        <button role="tab" id="tbLog" aria-selected="false" aria-controls="tabLog">掉落記錄</button>
+        <button role="tab" id="tbMob" aria-selected="false" aria-controls="tabMob">怪物</button>
+        <button role="tab" id="tbItem" aria-selected="false" aria-controls="tabItem">物品／製作</button>
+        <button role="tab" id="tbLog" aria-selected="false" aria-controls="tabLog">記錄</button>
       </div>
       <div class="tab" id="tabRoute" role="tabpanel">
       <div class="row">
@@ -283,6 +313,22 @@ ul.moblist li:first-child{border-top:0}
         </div>
         <div id="mobDetail" class="tab" hidden></div>
         <p class="note">怪物與掉落資料取自「樂園 怪物查詢」(joelbutaladr.github.io/linwebtw)，以天堂經典版為準。點「導航」會切到路線分頁並設為目的地。</p>
+      </div>
+      <div class="tab" id="tabItem" role="tabpanel" hidden>
+        <div id="itBrowse" class="tab">
+          <input class="inp" id="itQ" type="search" placeholder="搜尋裝備、材料或任何物品" autocomplete="off">
+          <div class="mobfilter" role="group" aria-label="篩選">
+            <button class="fchip" data-itf="craft" aria-pressed="false">可製作</button>
+            <button class="fchip" data-itf="drop" aria-pressed="false">有怪物掉落</button>
+            <button class="fchip" data-itf="mine" aria-pressed="false">我的配方</button>
+            <span class="mobcount" id="itCount"></span>
+          </div>
+          <ul class="moblist" id="itList"></ul>
+          <button class="go" id="itNewRecipe" style="align-self:flex-start">＋ 新增配方</button>
+        </div>
+        <div id="itDetail" class="tab" hidden></div>
+        <div id="itEdit" class="tab" hidden></div>
+        <p class="note">內建配方整理自巴哈姆特精華區（妖精森林物品製作）與玩家心得，屬原版天堂資料；樂園或經典版若有不同，請按「修改配方」改成遊戲內的數字，會存在這台裝置的瀏覽器。掉落來源取自樂園怪物查詢。</p>
       </div>
       <div class="tab" id="tabLog" role="tabpanel" hidden>
         <div class="lgform">
@@ -605,13 +651,13 @@ function openMob(k){const m=mobByK[k];if(!m)return;const q=mobQ.value.trim(),g=m
   mobDetail.innerHTML=`<button class="back" id="mobBack">◀ 返回列表</button>
    <div class="mdhead">${icon(m)}<div><h2>${esc(mobName(m))}</h2><span class="lv">Lv ${m.l}</span>${tags(m)}</div></div>
    <div class="sec"><h3>出沒地點</h3><div class="where">${Object.entries(g).map(([id,labs])=>`<div class="wrow"><div><b>${esc(byId[id].n)}</b><span>${esc([...new Set(labs)].join('、'))}</span></div><button class="go" data-go="${id}">導航 ➜</button></div>`).join('')||'<span class="ms">資料未列出地點</span>'}</div></div>
-   <div class="sec"><h3>掉落物</h3><div class="drops">${m.d.length?m.d.map(([c,it])=>`<div class="dcat"><i>${esc(c)}</i><div>${it.map(x=>`<span class="dropchip">${hl(x,q)}</span>`).join('')}</div></div>`).join(''):'<span class="ms">資料未列出掉落物</span>'}</div></div>`;
+   <div class="sec"><h3>掉落物</h3><div class="drops">${m.d.length?m.d.map(([c,it])=>`<div class="dcat"><i>${esc(c)}</i><div>${it.map(x=>`<button class="dropchip" data-it="${esc(x)}">${hl(x,q)}</button>`).join('')}</div></div>`).join(''):'<span class="ms">資料未列出掉落物</span>'}</div></div>`;
   mobBrowse.hidden=true;mobDetail.hidden=false;showTab('mob');mobDetail.scrollIntoView&&mobDetail.scrollIntoView({block:'nearest'});
 }
 function showMap(){const mb=document.getElementById('mapbox');if(!mb)return;try{mb.dispatchEvent(new CustomEvent('l1nav',{bubbles:true,composed:true}))}catch(e){}
   setTimeout(()=>{try{mb.scrollIntoView({block:'start',behavior:'smooth'})}catch(e){mb.scrollIntoView()}},80);}
 function closeMob(){mobDetail.hidden=true;mobBrowse.hidden=false}
-function showTab(t){[['route','tabRoute','tbRoute'],['mob','tabMob','tbMob'],['log','tabLog','tbLog']].forEach(([k,p,b])=>{document.getElementById(p).hidden=k!==t;document.getElementById(b).setAttribute('aria-selected',k===t)});try{localStorage.setItem('l1tab',t)}catch(e){}if(t==='log')renderLogStats()}
+function showTab(t){[['route','tabRoute','tbRoute'],['mob','tabMob','tbMob'],['item','tabItem','tbItem'],['log','tabLog','tbLog']].forEach(([k,p,b])=>{document.getElementById(p).hidden=k!==t;document.getElementById(b).setAttribute('aria-selected',k===t)});try{localStorage.setItem('l1tab',t)}catch(e){}if(t==='log')renderLogStats()}
 function destMobs(t){const el=document.getElementById('destMobs');if(!el)return;
   const list=MOB.filter(m=>mobNodes(m)[t]);
   el.innerHTML=list.length?'<span>這裡的怪物：</span>'+list.map(m=>`<button data-mk="${m.k}">${esc(mobName(m))} <small>Lv${m.l}</small></button>`).join(''):'';}
@@ -622,6 +668,7 @@ mobArea.addEventListener('change',()=>{closeMob();renderMobList()});
 
 document.getElementById('tabMob').addEventListener('click',e=>{
   const f=e.target.closest('.fchip');if(f){F[f.dataset.f]=!F[f.dataset.f];f.setAttribute('aria-pressed',F[f.dataset.f]);renderMobList();return}
+  const di=e.target.closest('.dropchip[data-it]');if(di){itQty=1;openItem(di.dataset.it);return}
   const b=e.target.closest('.mob');if(b){openMob(b.dataset.k);return}
   if(e.target.closest('#mobBack')){closeMob();return}
   const g=e.target.closest('.go');if(g){toSel.value=g.dataset.go;showTab('route');render();showMap();}
@@ -691,9 +738,112 @@ function renderLogStats(){const st=document.getElementById('lgStats');if(!st)ret
     return `<div class="lgsess"><div><b>${esc((MOBRN[s.reg]||['?'])[0])}</b>　${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}<br><span class="ms" style="white-space:normal">${s.hrs?s.hrs+' 小時・':''}擊殺 ${fmtN(kc)}${s.gold?'・金幣 '+fmtN(s.gold):''}${dc?'・'+esc(dc):''}</span></div><button data-del="${s.id}" class="${lgDelId===s.id?'y':''}">${lgDelId===s.id?'確定刪除':'刪除'}</button></div>`}).join(''):'<p class="ms">尚無紀錄</p>';
 }
 
+// ===== 物品／製作查詢 =====
+const RECIPES_BUILTIN=[
+ ['尤米弓',1,'娜魯帕（妖精森林）','elf',0,[['覆上奧里哈魯根的角',1],['奧里哈魯根金屬板',6],['品質綠寶石',2],['品質鑽石',1],['米索莉線',40],['芮克妮的蛻皮',5]]],
+ ['艾爾穆的祝福',1,'娜魯帕（妖精森林）','elf',0,[['奧里哈魯根金屬板',3],['米索莉線',150],['魔法寶石',5],['品質鑽石',1],['品質綠寶石',1],['品質藍寶石',1]]],
+ ['精靈鏈甲',1,'娜魯帕（妖精森林）','elf',0,[['米索莉金屬板',4],['米索莉線',150]]],
+ ['腕甲',1,'娜魯帕（妖精森林）','elf',0,[['米索莉線',20],['安特的樹皮',3]]],
+ ['力量手套',1,'娜魯帕（妖精森林）','elf',0,[['食人巨魔的血',1],['芮克妮的蛻皮',5],['米索莉線',20],['品質鑽石',1]]],
+ ['精靈粉末',20,'娜魯帕（妖精森林）','elf',0,[['元素石',1]]],
+ ['米索莉箭',2000,'娜魯帕（妖精森林）','elf',0,[['安特之樹枝',10],['純粹的米索莉塊',100],['鋼鐵塊',1]]],
+ ['奧里哈魯根箭',5000,'娜魯帕（妖精森林）','elf',0,[['安特之樹枝',10],['奧里哈魯根',100],['鋼鐵塊',1]]],
+ ['線',1,'芮克妮（妖精森林）','elf',0,[['潘的鬃毛',1]]],
+ ['米索莉線',1,'芮克妮（妖精森林）','elf',0,[['純粹的米索莉塊',5],['線',1]]],
+ ['芮克妮的蛻皮',1,'芮克妮（妖精森林）','elf',0,[['安特的樹皮',3]]],
+ ['安特的樹皮',1,'安特（妖精森林）：先攻擊安特，出現「蘑菇汁不足」時給牠蘑菇汁','elf',0,[['蘑菇汁',1]]],
+ ['米索莉金屬板',1,'潘（妖精森林）','elf',0,[['純粹的米索莉塊',50],['芮克妮的蛻皮',1]]],
+ ['奧里哈魯根金屬板',1,'潘（妖精森林）','elf',0,[['奧里哈魯根',30],['芮克妮的蛻皮',1]]],
+ ['潘的角',1,'潘（妖精森林）','elf',0,[['魔法笛子',1]]],
+ ['精靈羽翼',1,'精靈女皇或精靈（妖精森林）','elf',0,[['米索莉線',5],['精靈粉末',40]]],
+ ['純粹的米索莉塊',20,'精靈女皇或精靈（妖精森林）','elf',0,[['粗糙的米索莉塊',1]]],
+ ['奧里哈魯根',1,'精靈女皇（妖精森林，正義神殿右側，伺服器時間 12:00／00:00 出現）','elf',0,[['純粹的米索莉塊',10]]],
+ ['魔法笛子',1,'那翰（妖精森林）','elf',0,[['奧里哈魯根',10],['安特的樹皮',1]]],
+ ['覆上奧里哈魯根的角',1,'布拉伯（材料吸進布拉伯後 20 秒內取回）','sleep',0,[['潘的角',4],['奧里哈魯根',80],['紅寶石',3]]],
+ ['覆上米索莉的角',1,'布拉伯（材料吸進布拉伯後 20 秒內取回）','sleep',0,[['潘的角',2],['純粹的米索莉塊',80]]],
+ ['短劍的劍身',1,'布拉伯（材料吸進布拉伯後 20 秒內取回）','sleep',0,[['精靈羽翼',1],['純粹的米索莉塊',50]]],
+ ['長劍的劍身',1,'布拉伯（材料吸進布拉伯後 20 秒內取回）','sleep',0,[['精靈羽翼',3],['純粹的米索莉塊',150]]],
+ ['奧里哈魯根的劍身',1,'布拉伯（材料吸進布拉伯後 20 秒內取回）','sleep',0,[['精靈羽翼',3],['奧里哈魯根',150],['紅寶石',1]]],
+ ['保護者斗篷',1,'奇岩裁縫師','giran',20000,[['白布料',10],['紅布料',5],['藍布料',5]]],
+ ['T恤',1,'奇岩裁縫師','giran',30000,[['白布料',10],['紅布料',3],['藍布料',2]]],
+ ['鋼鐵長靴',1,'奇岩鐵匠','giran',8000,[['長靴',1],['金屬塊',160]]],
+];
+const RAWNOTE={'魔法寶石':'雜貨店可購買','白布料':'奇岩布料商人購買','紅布料':'奇岩布料商人購買','藍布料':'奇岩布料商人購買','元素石':'資料庫未列掉落，可向玩家購買','鋼鐵塊':'沉默洞穴的庫普可製作，或向玩家購買','蘑菇汁':'眠龍洞穴的蘑菇掉落'};
+const RKEY='l1recipes';
+function myRecipes(){try{const d=JSON.parse(localStorage.getItem(RKEY)||'{}');return d&&typeof d==='object'?d:{}}catch(e){return {}}}
+function saveMyRecipes(d){try{localStorage.setItem(RKEY,JSON.stringify(d))}catch(e){showToast('瀏覽器不允許儲存配方')}}
+let MYR=myRecipes();
+function recipeOf(name){if(MYR[name]){const r=MYR[name];return r.del?null:{...r,out:name,mine:true}}const b=RECIPES_BUILTIN.find(x=>x[0]===name);return b?{out:b[0],n:b[1],npc:b[2],node:b[3],gold:b[4],mats:b[5],mine:false}:null}
+function allRecipes(){const names=new Set([...RECIPES_BUILTIN.map(x=>x[0]),...Object.keys(MYR)]);return [...names].map(recipeOf).filter(Boolean)}
+const DROPIDX={};MOB.forEach(m=>m.d.forEach(([c,it])=>it.forEach(x=>{(DROPIDX[x]=DROPIDX[x]||[]).push(m)})));
+function itemUniverse(){const S=new Set(Object.keys(DROPIDX));allRecipes().forEach(r=>{S.add(r.out);r.mats.forEach(([x])=>S.add(x))});S.delete('金幣');return [...S]}
+function usedIn(name){return allRecipes().filter(r=>r.mats.some(([x])=>x===name))}
+function expand(name,qty,acc,depth,stack){const r=recipeOf(name);if(!r||depth>12||stack.includes(name)){acc.raw[name]=(acc.raw[name]||0)+qty;return}
+  const b=qty/(r.n||1);acc.gold+=b*(r.gold||0);r.mats.forEach(([x,q])=>expand(x,q*b,acc,depth+1,[...stack,name]))}
+const fmtQ=q=>Number.isInteger(q)?q.toLocaleString('zh-TW'):(Math.round(q*100)/100).toLocaleString('zh-TW');
+const itQ=document.getElementById('itQ'),itList=document.getElementById('itList'),itDetail=document.getElementById('itDetail'),itBrowse=document.getElementById('itBrowse'),itEdit=document.getElementById('itEdit');
+const ITF={craft:false,drop:false,mine:false};
+function srcHint(x){const d=DROPIDX[x],r=recipeOf(x);const a=[];if(r)a.push('可製作');if(d)a.push(d.length+' 種怪掉落');if(RAWNOTE[x])a.push(RAWNOTE[x]);return a.join('・')||'資料庫無來源'}
+function renderItemList(){const q=itQ.value.trim();let list=itemUniverse().filter(x=>!q||x.includes(q));
+  if(ITF.craft)list=list.filter(x=>recipeOf(x));if(ITF.drop)list=list.filter(x=>DROPIDX[x]);if(ITF.mine)list=list.filter(x=>MYR[x]);
+  list.sort((a,b)=>(recipeOf(b)?1:0)-(recipeOf(a)?1:0)||(a.length-b.length)||a.localeCompare(b,'zh-Hant'));
+  const shown=list.slice(0,150);
+  itList.innerHTML=shown.map(x=>{const r=recipeOf(x);return `<li><button class="mob" data-it="${esc(x)}" style="grid-template-columns:minmax(0,1fr) auto"><span style="min-width:0"><span class="mn">${hl(x,q)}</span>${r?`<span class="itbadge c">製作</span>`:''}${MYR[x]?'<span class="itbadge m">我的</span>':''}<span class="ms">${esc(srcHint(x))}</span></span><span class="lv">›</span></button></li>`}).join('')||'<li class="ms" style="padding:12px 0">找不到這個物品，可以按「＋ 新增配方」自己加入。</li>';
+  document.getElementById('itCount').textContent=`${list.length} 項`+(list.length>150?'（顯示前 150）':'');}
+let itQty=1,itCur=null;
+function openItem(name){itCur=name;const r=recipeOf(name),drops=DROPIDX[name]||[],uses=usedIn(name);let h=`<button class="back" id="itBack">◀ 返回列表</button><div><h2 style="margin:0;font-family:var(--f-display);font-size:22px;color:var(--gold)">${esc(name)}</h2>${RAWNOTE[name]?`<span class="ms">${esc(RAWNOTE[name])}</span>`:''}</div>`;
+  if(r){const acc={raw:{},gold:0};expand(name,itQty*(r.n||1),acc,0,[]);
+    h+=`<div class="sec"><h3>製作配方${r.mine?'（我的配方）':''}</h3><div class="rc"><div class="who">製作：<b>${esc(r.npc||'未填')}</b>${r.n>1?`　每次產出 <b>${fmtQ(r.n)}</b> 個`:''}${r.gold?`　手續費 <b>${fmtQ(r.gold)}</b> 金幣`:''}</div>
+      <div class="matl">${r.mats.map(([x,q])=>`<div class="mat"><button class="lnk" data-it="${esc(x)}">${esc(x)}<small>${esc(srcHint(x))}</small></button><span class="q">× ${fmtQ(q)}</span></div>`).join('')}</div>
+      <div class="edbtns">${r.node&&byId[r.node]?`<button class="go" data-go="${r.node}">導航到 ${esc(byId[r.node].n.replace(/（.*）/,''))} ➜</button>`:''}<button class="go" id="itEditBtn">修改配方</button>${r.mine&&RECIPES_BUILTIN.some(b=>b[0]===name)?'<button class="go warn" id="itReset">還原內建配方</button>':''}</div></div></div>
+      <div class="sec"><h3>拆到最底層的原料</h3><div class="rc"><div class="qtyrow">製作次數 <input class="inp" id="itQty" type="number" min="1" value="${itQty}" inputmode="numeric"> 次${r.n>1?`（共 ${fmtQ(itQty*r.n)} 個）`:''}</div>
+      <div class="matl">${Object.entries(acc.raw).sort((a,b)=>b[1]-a[1]).map(([x,q])=>`<div class="mat"><button class="lnk" data-it="${esc(x)}">${esc(x)}<small>${esc(srcHint(x))}</small></button><span class="q">× ${fmtQ(q)}</span></div>`).join('')}${acc.gold?`<div class="mat"><span>手續費合計</span><span class="q">${fmtQ(acc.gold)} 金幣</span></div>`:''}</div></div></div>`;}
+  else h+=`<div class="sec"><h3>製作配方</h3><div class="rc"><span class="ms" style="white-space:normal">內建資料沒有這個物品的配方。</span><div class="edbtns"><button class="go" id="itEditBtn">＋ 新增這個物品的配方</button></div></div></div>`;
+  h+=`<div class="sec"><h3>掉落來源（${drops.length} 種怪）</h3><div class="rc">${drops.length?drops.slice().sort((a,b)=>a.l-b.l).map(m=>{const g=mobNodes(m),first=Object.keys(g)[0];const where=Object.entries(g).map(([id,l])=>byId[id].n.replace(/（.*）/,'')+(()=>{const ls=[...new Set(l)].filter(x=>!byId[id].n.includes(x));return ls.length?' '+ls.slice(0,3).join('、'):''})()).join('；');
+      return `<div class="drw"><div><button class="lnk" data-mk="${m.k}">${esc(mobName(m))} <small class="lv">Lv${m.l}</small></button>${tags(m)}<span>${esc(where)}</span></div>${first?`<button class="go" data-go="${first}">導航 ➜</button>`:''}</div>`}).join(''):'<span class="ms">樂園怪物資料裡沒有怪物掉這個物品。</span>'}</div></div>`;
+  if(uses.length)h+=`<div class="sec"><h3>可以用來製作</h3><div class="rc"><div class="matl">${uses.map(u=>`<div class="mat"><button class="lnk" data-it="${esc(u.out)}">${esc(u.out)}<small>${esc(u.npc||'')}</small></button><span class="q">需 ${fmtQ(u.mats.find(([x])=>x===name)[1])}</span></div>`).join('')}</div></div></div>`;
+  itDetail.innerHTML=h;itBrowse.hidden=true;itEdit.hidden=true;itDetail.hidden=false;showTab('item');try{itDetail.scrollIntoView({block:'nearest'})}catch(e){}}
+function closeItem(){itDetail.hidden=true;itEdit.hidden=true;itBrowse.hidden=false;renderItemList()}
+function openEdit(name){const r=name?recipeOf(name):null;const mats=r?r.mats:[['',1]];
+  itEdit.innerHTML=`<button class="back" id="itEdBack">◀ 取消</button><h3 style="margin:0;font-size:16px">${name?'修改配方：'+esc(name):'新增配方'}</h3>
+   <div class="field"><label for="edOut">成品名稱</label><input class="inp" id="edOut" value="${esc(name||'')}" ${name?'readonly':''} placeholder="例：精靈金屬盔甲"></div>
+   <div class="lgrow2"><div class="field"><label for="edN">每次產出數量</label><input class="inp" id="edN" type="number" min="1" value="${r?r.n:1}"></div><div class="field"><label for="edGold">手續費（金幣）</label><input class="inp" id="edGold" type="number" min="0" value="${r&&r.gold?r.gold:''}" placeholder="0"></div></div>
+   <div class="field"><label for="edNpc">製作 NPC／地點</label><input class="inp" id="edNpc" value="${esc(r?r.npc||'':'')}" placeholder="例：娜魯帕（妖精森林）"></div>
+   <div class="field"><label for="edNode">導航地點（可不選）</label><select id="edNode"><option value="">不設定</option>${N.map(o=>`<option value="${o.id}" ${r&&r.node===o.id?'selected':''}>${esc(o.n)}</option>`).join('')}</select></div>
+   <div class="sec"><h3>材料</h3><div id="edMats" style="display:flex;flex-direction:column;gap:6px">${mats.map(([x,q])=>edRow(x,q)).join('')}</div><button class="go" id="edAddMat" style="margin-top:6px">＋ 加一列材料</button></div>
+   <datalist id="edItems">${itemUniverse().map(x=>`<option value="${esc(x)}">`).join('')}</datalist>
+   <div class="edbtns"><button class="go" id="edSave">儲存配方</button>${name?'<button class="go warn" id="edDel">刪除這個配方</button>':''}</div>`;
+  itBrowse.hidden=true;itDetail.hidden=true;itEdit.hidden=false;showTab('item');}
+function edRow(x,q){return `<div class="edrow"><input class="inp" list="edItems" value="${esc(x)}" placeholder="材料名稱" data-m="n"><input class="inp" type="number" min="0" step="any" value="${q}" data-m="q"><button data-m="x" aria-label="刪除這列">✕</button></div>`}
+let edDelArm=false;
+function edCollect(){const out=document.getElementById('edOut').value.trim();if(!out){showToast('請填成品名稱');return null}
+  const mats=[];itEdit.querySelectorAll('.edrow').forEach(r=>{const n=r.querySelector('[data-m=n]').value.trim(),q=parseFloat(r.querySelector('[data-m=q]').value);if(n&&q>0)mats.push([n,q])});
+  if(!mats.length){showToast('至少要有一樣材料');return null}
+  return {out,r:{n:Math.max(1,parseFloat(document.getElementById('edN').value)||1),gold:parseFloat(document.getElementById('edGold').value)||0,npc:document.getElementById('edNpc').value.trim(),node:document.getElementById('edNode').value||null,mats}}}
+document.getElementById('tbItem').addEventListener('click',()=>showTab('item'));
+itQ.addEventListener('input',()=>{closeItem()});
+document.getElementById('itNewRecipe').addEventListener('click',()=>openEdit(null));
+document.getElementById('tabItem').addEventListener('click',e=>{
+  const f=e.target.closest('[data-itf]');if(f){ITF[f.dataset.itf]=!ITF[f.dataset.itf];f.setAttribute('aria-pressed',ITF[f.dataset.itf]);renderItemList();return}
+  const it=e.target.closest('[data-it]');if(it){itQty=1;openItem(it.dataset.it);return}
+  const mk=e.target.closest('[data-mk]');if(mk){openMob(mk.dataset.mk);return}
+  const g=e.target.closest('[data-go]');if(g){toSel.value=g.dataset.go;showTab('route');render();showMap();return}
+  if(e.target.closest('#itBack')){closeItem();return}
+  if(e.target.closest('#itEditBtn')){openEdit(itCur);return}
+  if(e.target.closest('#itReset')){delete MYR[itCur];saveMyRecipes(MYR);showToast('已還原內建配方');openItem(itCur);return}
+  if(e.target.closest('#itEdBack')){if(itCur&&!itEdit.dataset.fresh)openItem(itCur);else closeItem();return}
+  if(e.target.closest('#edAddMat')){document.getElementById('edMats').insertAdjacentHTML('beforeend',edRow('',1));return}
+  const x=e.target.closest('[data-m=x]');if(x){x.closest('.edrow').remove();return}
+  if(e.target.closest('#edSave')){const c=edCollect();if(!c)return;MYR[c.out]=c.r;saveMyRecipes(MYR);showToast('已儲存配方：'+c.out);itQty=1;openItem(c.out);return}
+  const del=e.target.closest('#edDel');if(del){if(!edDelArm){edDelArm=true;del.textContent='再按一次確定刪除';return}edDelArm=false;
+    const isB=RECIPES_BUILTIN.some(b=>b[0]===itCur);if(isB)MYR[itCur]={del:true};else delete MYR[itCur];saveMyRecipes(MYR);showToast('已刪除配方');closeItem();return}
+});
+document.getElementById('tabItem').addEventListener('change',e=>{if(e.target.id==='itQty'){itQty=Math.max(1,parseInt(e.target.value)||1);openItem(itCur)}});
+renderItemList();
+
 document.getElementById('tbLog').addEventListener('click',()=>showTab('log'));
 initLog();
-try{const t=localStorage.getItem('l1tab');if(t==='mob'||t==='log')showTab(t)}catch(e){}
+try{const t=localStorage.getItem('l1tab');if(t==='mob'||t==='log'||t==='item')showTab(t)}catch(e){}
 loadImg('main');
 try{const m=JSON.parse(localStorage.getItem('l1me')||'null');if(m&&m.x){document.getElementById('locIn').value=m.x+' '+m.y;me=m;setTimeout(()=>setMe(m,true),0)}}catch(e){}
 render();
