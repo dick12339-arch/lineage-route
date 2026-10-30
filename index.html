@@ -225,12 +225,16 @@ ul.moblist li:first-child{border-top:0}
 .edrow button{height:34px;border-radius:5px;border:1px solid var(--line);background:none;color:var(--mute);cursor:pointer}
 .edbtns{display:flex;flex-wrap:wrap;gap:6px}
 .go.warn{border-color:var(--to);color:var(--to)}
+
+/* v2.1 地監樓層 */
+.tapmode select.mapsel{width:auto;max-width:150px;font-size:12px;padding:5px 22px 5px 8px;border:0;border-left:1px solid var(--line);border-radius:0;background-color:rgba(18,16,13,.85);color:var(--ink);background-position:calc(100% - 13px) 50%,calc(100% - 8px) 50%}
+.floorbar{display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-top:1px solid var(--line);background:var(--panel)}
 </style>
 
 <style>body{margin:0}[hidden]{display:none!important}</style></head><body><div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="ver">v2.0 · 2026-10-30</span>
+    <span class="ver">v2.1 · 2026-10-30</span>
   </header>
 
   <div class="main">
@@ -242,6 +246,7 @@ ul.moblist li:first-child{border-top:0}
           <div class="tapmode" role="group" aria-label="地圖切換">
             <button id="mapMain" aria-pressed="true">本土</button>
             <button id="mapTi" aria-pressed="false">說話之島</button>
+            <select id="mapSel" class="mapsel" aria-label="地監樓層地圖"></select>
           </div>
           <div class="tapmode" role="group" aria-label="點地圖設定">
             <button id="tapFrom" aria-pressed="false">點圖設出發</button>
@@ -260,8 +265,9 @@ ul.moblist li:first-child{border-top:0}
           <input id="mapFile" type="file" accept="image/*" multiple hidden>
         </div>
       </div>
+      <div class="floorbar" id="floorBar" hidden></div>
       <div class="locbar">
-        <input class="inp" id="locIn" inputmode="numeric" placeholder="輸入 /loc 座標，例：33430 32815" autocomplete="off">
+        <input class="inp" id="locIn" inputmode="numeric" placeholder="輸入 /loc 座標，例：33430 32815（地監加地圖編號）" autocomplete="off">
         <button class="go" id="locGo">標示我的位置</button>
         <button class="go" id="locFrom" hidden>從這裡出發</button>
         <span class="locinfo" id="locInfo"></span>
@@ -469,9 +475,13 @@ const c=o=>`<span class="coord" data-c="${o.x} ${o.y}">(${o.x}, ${o.y})</span>`;
 
 // ===== 地圖繪製（lcinfo.io 地圖＋座標換算）=====
 const MAPS={
-  main:{name:'本土',w:3136,h:1600,src:'https://www.lcinfo.io/images/map/fullmap.png',o:[33424.107,31270.457],sx:1,sy:1},
-  ti:{name:'說話之島',w:3008,h:1408,src:'https://www.lcinfo.io/images/map/island.png',o:[32535,32660],sx:3008/716,sy:1408/350}
+  main:{name:'本土',id:4,w:3136,h:1600,mx:3136,my:1600,src:'https://www.lcinfo.io/images/map/fullmap.png',o:[33424.107,31270.457],sx:1,sy:1},
+  ti:{name:'說話之島',id:0,w:3008,h:1408,mx:716,my:350,src:'https://www.lcinfo.io/images/map/island.png',o:[32535,32660],sx:3008/716,sy:1408/350}
 };
+const MAPDEF=[["m1",1,"冒險洞窟 1樓","冒險洞窟","말하는 섬 던전 1층",1420,736,32695,32735,"ti_adv"],["m2",2,"冒險洞窟 2樓","冒險洞窟","말하는 섬 던전 2층",1314,800,32695,32550,"ti_adv"],["m7",7,"古魯丁地監 1樓","古魯丁地監","글루디오 던전 1층",700,352,32695,32550,"gl_dun"],["m8",8,"古魯丁地監 2樓","古魯丁地監","글루디오 던전 2층",700,350,32695,32550,"gl_dun"],["m9",9,"古魯丁地監 3樓","古魯丁地監","글루디오 던전 3층",700,351,32695,32550,"gl_dun"],["m10",10,"古魯丁地監 4樓","古魯丁地監","글루디오 던전 4층",700,387,32695,32550,"gl_dun"],["m11",11,"古魯丁地監 5樓","古魯丁地監","글루디오 던전 5층",700,314,32695,32550,"gl_dun"],["m12",12,"古魯丁地監 6樓","古魯丁地監","글루디오 던전 6층",800,369,32695,32550,"gl_dun"],["m13",13,"古魯丁地監 7樓","古魯丁地監","글루디오 던전 7층",700,346,32695,32550,"gl_dun"],["m19",19,"眠龍洞穴 1樓","眠龍洞穴","요정 숲 던전 1층",700,365,32695,32550,"sleep"],["m20",20,"眠龍洞穴 2樓","眠龍洞穴","요정 숲 던전 2층",700,403,32695,32550,"sleep"],["m21",21,"眠龍洞穴 3樓","眠龍洞穴","요정 숲 던전 3층",700,348,32695,32550,"sleep"],["m25",25,"騎士洞穴 1樓","騎士洞穴（沙漠地監）","사막 던전 1층",900,499,32695,32550,"skt_dun"],["m26",26,"騎士洞穴 2樓","騎士洞穴（沙漠地監）","사막 던전 2층",900,460,32695,32550,"skt_dun"],["m27",27,"騎士洞穴 3樓","騎士洞穴（沙漠地監）","사막 던전 3층",900,465,32695,32550,"skt_dun"],["m28",28,"騎士洞穴 4樓","騎士洞穴（沙漠地監）","사막 던전 4층",900,463,32695,32550,"skt_dun"],["m30",30,"龍之谷地監 1樓","龍之谷地監","용의 계곡 던전 1층",630,350,32695,32550,"dvd"],["m31",31,"龍之谷地監 2樓","龍之谷地監","용의 계곡 던전 2층",700,354,32695,32550,"dvd"],["m32",32,"龍之谷地監 3樓","龍之谷地監","용의 계곡 던전 3층",700,403,32695,32550,"dvd"],["m33",33,"龍之谷地監 4樓","龍之谷地監","용의 계곡 던전 4층",630,350,32695,32550,"dvd"],["m35",35,"龍之谷地監 5樓","龍之谷地監","용의 계곡 던전 5층",630,350,32695,32550,"dvd"],["m36",36,"龍之谷地監 6樓","龍之谷地監","용의 계곡 던전 6층",630,350,32695,32550,"dvd"],["m37",37,"龍之谷地監 7樓（安塔瑞斯巢穴）","龍之谷地監","용의 계곡 던전 7층",630,350,32695,32550,"dvd"],["m53",53,"奇岩地監 1樓","奇岩地監","기란 던전 1층",700,380,32695,32550,"gi_dun"],["m54",54,"奇岩地監 2樓","奇岩地監","기란 던전 2층",700,360,32695,32550,"gi_dun"],["m55",55,"奇岩地監 3樓","奇岩地監","기란 던전 3층",700,339,32695,32550,"gi_dun"],["m56",56,"奇岩地監 4樓","奇岩地監","기란 던전 4층",700,361,32695,32550,"gi_dun"],["m43",43,"巨蟻洞穴 區域1","巨蟻洞穴","개미굴1",1024,518,32695,32550,"ant"],["m44",44,"巨蟻洞穴 區域2","巨蟻洞穴","개미굴2",1024,501,32695,32550,"ant"],["m45",45,"巨蟻洞穴 區域3","巨蟻洞穴","개미굴3",1024,547,32695,32550,"ant"],["m46",46,"巨蟻洞穴 區域4","巨蟻洞穴","개미굴4",1024,541,32695,32550,"ant"],["m47",47,"巨蟻洞穴 區域5","巨蟻洞穴","개미굴5",1024,535,32695,32550,"ant"],["m48",48,"巨蟻洞穴 區域6","巨蟻洞穴","개미굴6",1024,541,32695,32550,"ant"],["m49",49,"巨蟻洞穴 區域7","巨蟻洞穴","개미굴7",1024,523,32695,32550,"ant"],["m50",50,"巨蟻洞穴 區域8","巨蟻洞穴","개미굴8",1024,523,32695,32550,"ant"],["m51",51,"巨蟻洞穴 女王區","巨蟻洞穴","개미여왕굴",2088,1115,32695,32550,"ant"],["m59",59,"海音地監 1樓","海音地監","수중 던전 1층",1200,634,32695,32550,"hn_dun"],["m60",60,"海音地監 2樓","海音地監","수중 던전 2층",1200,699,32695,32550,"hn_dun"],["m61",61,"海音地監 3樓","海音地監","수중 던전 3층",1200,674,32695,32550,"hn_dun"],["m63",63,"海音地監 伊娃王國","海音地監","에바의 왕국",3000,1482,32695,32550,"hn_dun"],["m62",62,"海音地監 伊娃神殿","海音地監","에바의 신전",630,350,32695,32550,"hn_dun"],["m65",65,"海音地監 法利昂巢穴","海音地監","파푸리온의 둥지",700,388,32695,32550,"hn_dun"],["m303",303,"夢幻之島","特殊地圖","몽환의 섬",630,350,32695,32550,"dream"],["m72",72,"水晶洞穴 1樓","水晶洞穴","수정 동굴 1층",1200,672,32695,32550,"crystal"],["m73",73,"水晶洞穴 2樓","水晶洞穴","수정 동굴 2층",1200,674,32695,32550,"crystal"],["m74",74,"水晶洞穴 3樓","水晶洞穴","수정 동굴 3층",1200,675,32695,32550,"crystal"],["m75",75,"象牙塔 1樓","象牙塔","상아탑 1층",1200,663,32695,32550,"ivory"],["m76",76,"象牙塔 2樓","象牙塔","상아탑 2층",1200,653,32695,32550,"ivory"],["m77",77,"象牙塔 3樓","象牙塔","상아탑 3층",1200,683,32695,32550,"ivory"],["m78",78,"象牙塔 4樓","象牙塔","상아탑 4층",1200,675,32695,32550,"ivory"],["m79",79,"象牙塔 5樓","象牙塔","상아탑 5층",1200,675,32695,32550,"ivory"],["m80",80,"象牙塔 6樓","象牙塔","상아탑 6층",1200,673,32695,32550,"ivory"],["m81",81,"象牙塔 7樓","象牙塔","상아탑 7층",1200,675,32695,32550,"ivory"],["m82",82,"象牙塔 8樓","象牙塔","상아탑 8층",1200,675,32695,32550,"ivory"],["m23",23,"風木城地監 1樓","風木城地監","윈다우드 성 던전 1층",1200,675,32695,32550,"woodbec"],["m24",24,"風木城地監 2樓","風木城地監","윈다우드 성 던전 2층",1200,659,32695,32550,"woodbec"],["m70",70,"遺忘之島","特殊地圖","잊혀진 섬",900,499,32695,32550,"forgot"],["m777",777,"被遺棄者之地","特殊地圖","버림받은 자들의 땅",800,480,32695,32550,"oren"],["m301",301,"地下水道","特殊地圖","지하 수로",1200,669,32695,32550,"sewer"],["m440",440,"海賊島 島上","海賊島","해적섬",1200,669,32695,32550,null],["m441",441,"海賊島 1樓","海賊島","해적섬 던전 1층",1200,669,32695,32550,null],["m442",442,"海賊島 2樓","海賊島","해적섬 던전 2층",1200,669,32695,32550,null],["m443",443,"海賊島 3樓","海賊島","해적섬 던전 3층",1200,669,32695,32550,null],["m101",101,"傲慢之塔 1樓","傲慢之塔","오만의 탑 1층",1200,600,32695,32550,"toi"],["m102",102,"傲慢之塔 2樓","傲慢之塔","오만의 탑 2층",1200,600,32695,32550,"toi"],["m103",103,"傲慢之塔 3樓","傲慢之塔","오만의 탑 3층",1200,600,32695,32550,"toi"],["m104",104,"傲慢之塔 4樓","傲慢之塔","오만의 탑 4층",1200,600,32695,32550,"toi"],["m105",105,"傲慢之塔 5樓","傲慢之塔","오만의 탑 5층",1200,600,32695,32550,"toi"],["m106",106,"傲慢之塔 6樓","傲慢之塔","오만의 탑 6층",1200,600,32695,32550,"toi"],["m107",107,"傲慢之塔 7樓","傲慢之塔","오만의 탑 7층",1200,600,32695,32550,"toi"],["m108",108,"傲慢之塔 8樓","傲慢之塔","오만의 탑 8층",1200,600,32695,32550,"toi"],["m109",109,"傲慢之塔 9樓","傲慢之塔","오만의 탑 9층",1200,600,32695,32550,"toi"],["m110",110,"傲慢之塔 10樓","傲慢之塔","오만의 탑 10층",1200,600,32695,32550,"toi"],["m111",111,"傲慢之塔 11樓","傲慢之塔","오만의 탑 11층",1200,600,32695,32550,"toi"],["m112",112,"傲慢之塔 12樓","傲慢之塔","오만의 탑 12층",1200,600,32695,32550,"toi"],["m113",113,"傲慢之塔 13樓","傲慢之塔","오만의 탑 13층",1200,600,32695,32550,"toi"],["m114",114,"傲慢之塔 14樓","傲慢之塔","오만의 탑 14층",1200,600,32695,32550,"toi"],["m115",115,"傲慢之塔 15樓","傲慢之塔","오만의 탑 15층",1200,600,32695,32550,"toi"],["m116",116,"傲慢之塔 16樓","傲慢之塔","오만의 탑 16층",1200,600,32695,32550,"toi"],["m117",117,"傲慢之塔 17樓","傲慢之塔","오만의 탑 17층",1200,600,32695,32550,"toi"],["m118",118,"傲慢之塔 18樓","傲慢之塔","오만의 탑 18층",1200,600,32695,32550,"toi"],["m119",119,"傲慢之塔 19樓","傲慢之塔","오만의 탑 19층",1200,600,32695,32550,"toi"],["m120",120,"傲慢之塔 20樓","傲慢之塔","오만의 탑 20층",1200,600,32695,32550,"toi"]];
+const FLOORREG={"冒險洞窟 1樓":"m1","冒險洞窟 2樓":"m2","古魯丁地監 1樓":"m7","古魯丁地監 2樓":"m8","古魯丁地監 3樓":"m9","古魯丁地監 4樓":"m10","古魯丁地監 5樓":"m11","古魯丁地監 6樓":"m12","古魯丁地監 7樓":"m13","眠龍洞穴 1樓":"m19","眠龍洞穴 2樓":"m20","眠龍洞穴 3樓":"m21","騎士洞穴 1樓":"m25","騎士洞穴 2樓":"m26","騎士洞穴 3樓":"m27","騎士洞穴 4樓":"m28","龍之谷地監 1樓":"m30","龍之谷地監 2樓":"m31","龍之谷地監 3樓":"m32","龍之谷地監 4樓":"m33","龍之谷地監 5樓":"m35","龍之谷地監 6樓":"m36","龍之谷地監 7樓（安塔瑞斯巢穴）":"m37","奇岩地監 1樓":"m53","奇岩地監 2樓":"m54","奇岩地監 3樓":"m55","奇岩地監 4樓":"m56","巨蟻洞穴":"m43","海音地監 1樓":"m59","海音地監 2樓":"m60","海音地監 3樓":"m61","海音地監 4樓":"m63"};
+MAPDEF.forEach(([k,id,name,grp,img,mx,my,ox,oy,entry])=>{MAPS[k]={name,id,grp,dg:true,entry,w:mx,h:my,mx,my,sx:1,sy:1,o:[ox,oy],src:'https://www.lcinfo.io/images/map/'+encodeURIComponent(img)+'.png'}});
+function setDims(m,nw,nh){const M=MAPS[m];if(!M||!nw)return false;if(M.w===nw&&M.h===nh)return false;M.w=nw;M.h=nh;M.sx=nw/M.mx;M.sy=nh/M.my;return true}
 const UDX=1.001,UDY=0.998,VDX=-0.501,VDY=0.505,DET=UDX*VDY-UDY*VDX;
 function toPx(m,X,Y){const M=MAPS[m],dx=X-M.o[0],dy=Y-M.o[1];return [(dx*UDX+dy*UDY)*M.sx,(dx*VDX+dy*VDY)*M.sy]}
 function toLoc(m,px,py){const M=MAPS[m],a=px/M.sx,b=py/M.sy;return [Math.round(M.o[0]+(a*VDY-b*UDY)/DET),Math.round(M.o[1]+(b*UDX-a*VDX)/DET)]}
@@ -500,11 +510,11 @@ async function loadImg(m){const M=MAPS[m];document.getElementById('mapMissing').
   const im=new Image();try{im.referrerPolicy='no-referrer'}catch(e){}
   im.onload=()=>{IMGURL[m]=M.src;if(curMap===m)mimg.src=M.src};im.onerror=()=>{if(curMap===m)showMissing()};im.src=M.src;}
 function showMissing(){mimg.style.visibility='hidden';document.getElementById('mapMissTxt').textContent=`${MAPS[curMap].name}地圖圖片載入失敗（可能被網站阻擋）。選一次地圖檔，之後會記住：`;document.getElementById('mapMissing').hidden=false}
-mimg.addEventListener('load',()=>{document.getElementById('mapMissing').hidden=true;mimg.style.visibility='visible'});
+mimg.addEventListener('load',()=>{document.getElementById('mapMissing').hidden=true;mimg.style.visibility='visible';if(setDims(curMap,mimg.naturalWidth,mimg.naturalHeight)){mimg.style.width=MAPS[curMap].w+'px';mimg.style.height=MAPS[curMap].h+'px';focusRoute()}});
 
 document.getElementById('mapFile').addEventListener('change',e=>{[...e.target.files].forEach(f=>{const u=URL.createObjectURL(f),im=new Image();im.onload=()=>{
   const k=im.naturalWidth===3008?'ti':im.naturalWidth===3136?'main':curMap;IMGURL[k]=u;IDB.put(k,f);if(k===curMap){mimg.src=u}showToast('已記住'+MAPS[k].name+'地圖');};im.src=u});e.target.value='';});
-function setMap(m,refit){if(!MAPS[m])return;curMap=m;document.getElementById('mapMain').setAttribute('aria-pressed',m==='main');document.getElementById('mapTi').setAttribute('aria-pressed',m==='ti');
+function setMap(m,refit){if(!MAPS[m])return;curMap=m;document.getElementById('mapMain').setAttribute('aria-pressed',m==='main');document.getElementById('mapTi').setAttribute('aria-pressed',m==='ti');document.getElementById('mapSel').value=MAPS[m].dg?m:'';floorBar(m);
   loadImg(m);if(refit||!VIEW[m])focusRoute();else draw();}
 function focusRoute(){const pts=[];const add=o=>{if(o&&nodeMap(o)===curMap)pts.push(toPx(curMap,o.x,o.y))};
   lastPath.forEach(s=>{add(byId[s.a]);add(byId[s.b])});if(!lastPath.length){add(byId[fromSel.value]);add(byId[toSel.value])}
@@ -551,11 +561,19 @@ document.getElementById('zOut').addEventListener('click',()=>zoomAt(1/1.5,cw()/2
 document.getElementById('zFit').addEventListener('click',()=>focusRoute());
 document.getElementById('mapMain').addEventListener('click',()=>setMap('main',true));
 document.getElementById('mapTi').addEventListener('click',()=>setMap('ti',true));
+(function(){const sel=document.getElementById('mapSel'),G={};MAPDEF.forEach(d=>{(G[d[3]]=G[d[3]]||[]).push(d)});
+  sel.innerHTML='<option value="">地監樓層…</option>'+Object.entries(G).map(([g,ds])=>`<optgroup label="${g}">${ds.map(d=>`<option value="${d[0]}">${d[2]}</option>`).join('')}</optgroup>`).join('');
+  sel.addEventListener('change',()=>{if(sel.value)setMap(sel.value,true);else setMap('main',true)});})();
+function floorBar(m){const el=document.getElementById('floorBar'),M=MAPS[m];if(!M||!M.dg){el.hidden=true;el.innerHTML='';return}
+  const reg=Object.keys(FLOORREG).find(r=>FLOORREG[r]===m);const regIds=reg?Object.keys(MOBRN).filter(id=>MOBRN[id][0]===reg||MOBRN[id][0]===reg+' 獵場'):[];
+  const mobs=MOB.filter(x=>x.r.some(id=>regIds.includes(String(id)))).sort((a,b)=>a.l-b.l);
+  el.innerHTML=`<div class="destmobs"><span><b style="color:var(--gold)">${esc(M.name)}</b>（地圖編號 ${M.id}）</span>${M.entry&&byId[M.entry]?`<button data-go="${M.entry}">導航到入口：${esc(byId[M.entry].n.replace(/（.*）/,''))} ➜</button>`:''}</div>${mobs.length?`<div class="destmobs"><span>這層的怪物：</span>${mobs.map(x=>`<button data-mk="${x.k}">${esc(mobName(x))} <small>Lv${x.l}</small></button>`).join('')}</div>`:''}`;el.hidden=false;}
+document.getElementById('floorBar').addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g){toSel.value=g.dataset.go;render();return}const k=e.target.closest('[data-mk]');if(k)openMob(k.dataset.mk)});
 if(window.ResizeObserver){let rw=0,rh=0;new ResizeObserver(()=>{if(Math.abs(cw()-rw)<2&&Math.abs(ch()-rh)<2)return;const first=!rw;rw=cw();rh=ch();if(first||!VIEW[curMap]||!userMoved)focusRoute();else{clampView();draw()}}).observe(mv)}
 // 我的位置
 function parseLoc(t){const m=String(t).match(/(\d{5})\D+(\d{5})(?:\D+(\d{1,4}))?/);if(!m)return null;return {x:+m[1],y:+m[2],id:m[3]!=null?+m[3]:null}}
 function inMap(m,X,Y){const [px,py]=toPx(m,X,Y),M=MAPS[m];return px>=0&&py>=0&&px<=M.w&&py<=M.h}
-function setMe(loc,quiet){let m=loc.id===0?'ti':loc.id===4?'main':null;
+function setMe(loc,quiet){let m=loc.id===0?'ti':loc.id===4?'main':(loc.id!=null&&MAPS['m'+loc.id])?'m'+loc.id:null;
   if(m===null){const a=inMap(curMap,loc.x,loc.y),other=curMap==='main'?'ti':'main';m=a?curMap:inMap(other,loc.x,loc.y)?other:curMap;}
   me={x:loc.x,y:loc.y,m};try{localStorage.setItem('l1me',JSON.stringify(me))}catch(e){}
   let best=null,bd=1e9;N.forEach(o=>{if(nodeMap(o)!==m)return;const d=dist(o,me);if(d<bd){bd=d;best=o}});me.near=best&&best.id;
@@ -651,11 +669,13 @@ function openMob(k){const m=mobByK[k];if(!m)return;const q=mobQ.value.trim(),g=m
   mobDetail.innerHTML=`<button class="back" id="mobBack">◀ 返回列表</button>
    <div class="mdhead">${icon(m)}<div><h2>${esc(mobName(m))}</h2><span class="lv">Lv ${m.l}</span>${tags(m)}</div></div>
    <div class="sec"><h3>出沒地點</h3><div class="where">${Object.entries(g).map(([id,labs])=>`<div class="wrow"><div><b>${esc(byId[id].n)}</b><span>${esc([...new Set(labs)].join('、'))}</span></div><button class="go" data-go="${id}">導航 ➜</button></div>`).join('')||'<span class="ms">資料未列出地點</span>'}</div></div>
-   <div class="sec"><h3>掉落物</h3><div class="drops">${m.d.length?m.d.map(([c,it])=>`<div class="dcat"><i>${esc(c)}</i><div>${it.map(x=>`<button class="dropchip" data-it="${esc(x)}">${hl(x,q)}</button>`).join('')}</div></div>`).join(''):'<span class="ms">資料未列出掉落物</span>'}</div></div>`;
+   ${floorBtns(m)}<div class="sec"><h3>掉落物</h3><div class="drops">${m.d.length?m.d.map(([c,it])=>`<div class="dcat"><i>${esc(c)}</i><div>${it.map(x=>`<button class="dropchip" data-it="${esc(x)}">${hl(x,q)}</button>`).join('')}</div></div>`).join(''):'<span class="ms">資料未列出掉落物</span>'}</div></div>`;
   mobBrowse.hidden=true;mobDetail.hidden=false;showTab('mob');mobDetail.scrollIntoView&&mobDetail.scrollIntoView({block:'nearest'});
 }
 function showMap(){const mb=document.getElementById('mapbox');if(!mb)return;try{mb.dispatchEvent(new CustomEvent('l1nav',{bubbles:true,composed:true}))}catch(e){}
   setTimeout(()=>{try{mb.scrollIntoView({block:'start',behavior:'smooth'})}catch(e){mb.scrollIntoView()}},80);}
+function floorBtns(m){const ks=[...new Set(m.r.map(id=>{const n=(MOBRN[id]||[''])[0].replace(/ 獵場$/,'');return FLOORREG[n]}).filter(Boolean))];
+  return ks.length?`<div class="sec"><h3>樓層地圖</h3><div class="destmobs">${ks.map(k=>`<button data-floor="${k}">🗺 ${esc(MAPS[k].name)}</button>`).join('')}</div></div>`:''}
 function closeMob(){mobDetail.hidden=true;mobBrowse.hidden=false}
 function showTab(t){[['route','tabRoute','tbRoute'],['mob','tabMob','tbMob'],['item','tabItem','tbItem'],['log','tabLog','tbLog']].forEach(([k,p,b])=>{document.getElementById(p).hidden=k!==t;document.getElementById(b).setAttribute('aria-selected',k===t)});try{localStorage.setItem('l1tab',t)}catch(e){}if(t==='log')renderLogStats()}
 function destMobs(t){const el=document.getElementById('destMobs');if(!el)return;
@@ -668,6 +688,7 @@ mobArea.addEventListener('change',()=>{closeMob();renderMobList()});
 
 document.getElementById('tabMob').addEventListener('click',e=>{
   const f=e.target.closest('.fchip');if(f){F[f.dataset.f]=!F[f.dataset.f];f.setAttribute('aria-pressed',F[f.dataset.f]);renderMobList();return}
+  const fl=e.target.closest('[data-floor]');if(fl){setMap(fl.dataset.floor,true);showMap();return}
   const di=e.target.closest('.dropchip[data-it]');if(di){itQty=1;openItem(di.dataset.it);return}
   const b=e.target.closest('.mob');if(b){openMob(b.dataset.k);return}
   if(e.target.closest('#mobBack')){closeMob();return}
