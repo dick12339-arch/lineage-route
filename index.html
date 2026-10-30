@@ -234,7 +234,7 @@ ul.moblist li:first-child{border-top:0}
 <style>body{margin:0}[hidden]{display:none!important}</style></head><body><div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="ver">v2.1.1 · 2026-10-31</span>
+    <span class="ver">v2.1.2 · 2026-10-31</span>
   </header>
 
   <div class="main">
@@ -509,10 +509,12 @@ async function loadImg(m){const M=MAPS[m];document.getElementById('mapMissing').
   if(blob){IMGURL[m]=URL.createObjectURL(blob);mimg.src=IMGURL[m];return}
   const C=srcCandidates(M);let ci=0;M.tried=[];
   const tryNext=()=>{if(ci>=C.length){if(curMap===m)showMissing();return}const u=C[ci++];M.tried.push(u);const im=new Image();try{im.referrerPolicy='no-referrer'}catch(e){}
-    im.onload=()=>{M.src=u;IMGURL[m]=u;if(curMap===m)mimg.src=u};im.onerror=tryNext;im.src=u};tryNext();}
+    im.onload=()=>{M.src=u;IMGURL[m]=u;if(M.dg)markNoMap(m,false);if(curMap===m)mimg.src=u};im.onerror=tryNext;im.src=u};tryNext();}
 function srcCandidates(M){if(!M.img)return [M.src];const B='https://www.lcinfo.io/images/map/',n=M.img,names=[...new Set([n,n.replace(/ /g,'_'),n.replace(/ /g,''),n.replace(/ (\d+층)$/,'$1')])],out=[];
   names.forEach(x=>['png','webp','jpg'].forEach(ext=>out.push(B+encodeURIComponent(x)+'.'+ext)));return [...new Set(out)]}
-function showMissing(){const M=MAPS[curMap];mimg.style.visibility='hidden';const u=(M.tried&&M.tried[0])||M.src;
+function noMap(){try{return JSON.parse(localStorage.getItem('l1nomap')||'[]')}catch(e){return []}}
+function markNoMap(k,bad){let a=noMap().filter(x=>x!==k);if(bad)a.push(k);try{localStorage.setItem('l1nomap',JSON.stringify(a))}catch(e){}const o=document.querySelector(`#mapSel option[value="${k}"]`);if(o)o.textContent=MAPS[k].name+(bad?'（無圖）':'')}
+function showMissing(){const M=MAPS[curMap];if(M.dg&&!IMGURL[curMap])markNoMap(curMap,true);mimg.style.visibility='hidden';const u=(M.tried&&M.tried[0])||M.src;
   document.getElementById('mapMissTxt').innerHTML=`${esc(M.name)}地圖讀取失敗（試了 ${(M.tried||[]).length||1} 種檔名）。<a href="${u}" target="_blank" rel="noopener" style="color:var(--gold)">開啟原圖網址</a>：若顯示 404，代表 lcinfo 沒有這張圖；若圖片打得開，請存下來後按右邊選擇，之後會記住。`;
   document.getElementById('mapMissing').hidden=false}
 mimg.addEventListener('load',()=>{document.getElementById('mapMissing').hidden=true;mimg.style.visibility='visible';if(setDims(curMap,mimg.naturalWidth,mimg.naturalHeight)){mimg.style.width=MAPS[curMap].w+'px';mimg.style.height=MAPS[curMap].h+'px';focusRoute()}});
@@ -567,7 +569,7 @@ document.getElementById('zFit').addEventListener('click',()=>focusRoute());
 document.getElementById('mapMain').addEventListener('click',()=>setMap('main',true));
 document.getElementById('mapTi').addEventListener('click',()=>setMap('ti',true));
 (function(){const sel=document.getElementById('mapSel'),G={};MAPDEF.forEach(d=>{(G[d[3]]=G[d[3]]||[]).push(d)});
-  sel.innerHTML='<option value="">地監樓層…</option>'+Object.entries(G).map(([g,ds])=>`<optgroup label="${g}">${ds.map(d=>`<option value="${d[0]}">${d[2]}</option>`).join('')}</optgroup>`).join('');
+  sel.innerHTML='<option value="">地監樓層…</option>'+Object.entries(G).map(([g,ds])=>`<optgroup label="${g}">${ds.map(d=>`<option value="${d[0]}">${d[2]}${noMap().includes(d[0])?'（無圖）':''}</option>`).join('')}</optgroup>`).join('');
   sel.addEventListener('change',()=>{if(sel.value)setMap(sel.value,true);else setMap('main',true)});})();
 function floorBar(m){const el=document.getElementById('floorBar'),M=MAPS[m];if(!M||!M.dg){el.hidden=true;el.innerHTML='';return}
   const reg=Object.keys(FLOORREG).find(r=>FLOORREG[r]===m);const regIds=reg?Object.keys(MOBRN).filter(id=>MOBRN[id][0]===reg||MOBRN[id][0]===reg+' 獵場'):[];
