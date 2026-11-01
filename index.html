@@ -251,7 +251,7 @@ ul.moblist li:first-child{border-top:0}
 <style>body{margin:0}[hidden]{display:none!important}</style></head><body><div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="ver">v2.2 · 2026-11-01</span>
+    <span class="ver">v2.2.1 · 2026-11-01</span>
   </header>
 
   <div class="main">
@@ -881,7 +881,11 @@ document.getElementById('tabItem').addEventListener('change',e=>{if(e.target.id=
 renderItemList();
 
 // ===== 練功推薦 =====
-const RCK={knight:{w:1.0,n:'騎士'},elf:{w:0.8,n:'妖精'},mage:{w:0.4,n:'法師'},royal:{w:0.8,n:'王族'}};
+const RCK={knight:{w:1.0,n:'騎士',tol:6,acm:1.0},elf:{w:0.8,n:'妖精',tol:2,acm:1.3},mage:{w:0.4,n:'法師',tol:1,acm:1.5},royal:{w:0.8,n:'王族',tol:4,acm:1.1}};
+const APPROACH={'龍之谷地監':'龍之谷','古魯丁地監':'古魯丁','海底隧道':'古魯丁','眠龍洞穴':'妖魔森林','騎士洞穴':'銀騎士地區','奇岩地監':'奇岩','海音地監':'海音','巨蟻洞穴':'風木','冒險洞窟':'說話之島'};
+function regMobsByName(nm){const ids=Object.keys(MOBRN).filter(id=>MOBRN[id][0]===nm);return MOB.filter(m=>m.r.some(r=>ids.includes(String(r))))}
+function travelOf(name,cat){if(cat==='野外')return [];const base=name.replace(/ 獵場$/,''),mm=base.match(/^(.+?) (\d+)樓$/),key=mm?mm[1]:base,out=[];
+  if(APPROACH[key])out.push(APPROACH[key]);if(mm)for(let k=1;k<+mm[2];k++)out.push(`${key} ${k}樓`);return out}
 const VALKEY=['魔法書','精靈水晶','品質','項鍊','戒指','腰帶','斗篷','魔法頭盔','技術書'];
 const RCF={afk:false,safe:false};
 function rcState(){try{return JSON.parse(localStorage.getItem('l1rec')||'null')}catch(e){return null}}
@@ -894,15 +898,18 @@ function initRec(){const st=rcState()||{c:'elf',lv:30,w:5,ac:-20};document.getEl
 function renderRec(){const out=document.getElementById('rcOut');if(!out)return;
   const c=document.getElementById('rcCls').value,lv=Math.max(1,parseInt(document.getElementById('rcLv').value)||1),w=Math.max(0,parseInt(document.getElementById('rcW').value)||0),ac=Math.abs(parseInt(document.getElementById('rcAc').value)||0);
   try{localStorage.setItem('l1rec',JSON.stringify({c,lv,w,ac:-ac}))}catch(e){}
-  const eff=lv*0.7+w*RCK[c].w;
+  const K=RCK[c],eff=lv*0.6+w*K.w,tol=eff+K.tol;
   const rows=[];
   Object.entries(MOBRN).forEach(([id,[name,cat]])=>{if(name==='妖精森林')return;const ms=MOB.filter(m=>m.r.includes(+id));if(!ms.length)return;
     const norm=ms.filter(m=>!isBoss(m)),boss=ms.filter(isBoss);if(!norm.length)return;
     const avg=norm.reduce((a,m)=>a+m.l,0)/norm.length,max=Math.max(...norm.map(m=>m.l)),und=norm.filter(m=>m.u).length/norm.length,big=norm.filter(m=>m.b).length/norm.length;
-    const req=Math.max(0,(max-8)*1.0),afk=cat==='個人獵場';
+    const req=Math.max(0,(max-8)*K.acm),afk=cat==='個人獵場';
     if(RCF.afk&&!afk)return;
     const val=new Set();norm.forEach(m=>m.d.forEach(([cc,it])=>it.forEach(x=>{if(VALKEY.some(k=>x.includes(k)))val.add(x)})));
-    let sc=100-Math.abs(avg-eff)*4-Math.max(0,max-(eff+6))*6-Math.max(0,req-ac)*2+Math.min(val.size,15)*1.2;const why=[];
+    let sc=100-Math.abs(avg-eff)*4-Math.max(0,max-tol)*8-Math.max(0,req-ac)*2.5+Math.min(val.size,15)*1.2;const why=[];
+    const tr=travelOf(name,cat),trM=tr.flatMap(regMobsByName).filter(m=>!isBoss(m)),trMax=trM.length?Math.max(...trM.map(m=>m.l)):0,trBoss=[...new Set(tr.flatMap(regMobsByName).filter(isBoss).map(mobName))];
+    const trTop=trM.filter(m=>m.l>tol).sort((a,b)=>b.l-a.l).slice(0,3);
+    if(trMax>tol)sc-=(trMax-tol)*5;
     if(c==='mage'&&und>=0.4){sc+=8;why.push('不死系多，法師的聖潔之光、火球打不死系有利')}
     if(c==='elf'&&und>=0.4){sc+=6;why.push('不死系多，帶銀箭效率好')}
     if(c==='elf'&&cat==='野外'){sc+=4;why.push('野外空間大，方便拉怪射擊')}
@@ -910,9 +917,13 @@ function renderRec(){const out=document.getElementById('rcOut');if(!out)return;
     if(c==='knight'&&big>=0.4){sc-=4;why.push('大型怪偏多，注意武器對大型傷害較低')}
     if(c==='mage'&&big>=0.5){sc-=4;why.push('大型近戰怪多，法師要注意走位')}
     if(afk){sc+=5;why.push('個人獵場，可離線掛機最多 12 小時')}
-    const danger=max>eff+8||req-ac>10?'bad':max>eff+3||req>ac?'mid':'ok';
+    let danger=max>tol+4||req-ac>8?'bad':max>tol||req>ac?'mid':'ok';
+    if(trMax>tol+4)danger='bad';else if(trMax>tol&&danger==='ok')danger='mid';
+    if(danger==='bad')sc-=20;
+    if(trTop.length)why.push(`路上會經過${tr[0]}${tr.length>1?'與上面樓層':''}，有 ${trTop.map(m=>mobName(m)+' Lv'+m.l).join('、')} 偏強，建議組隊或用傳送卷軸直達`);
+    if(trBoss.length&&tr.length)why.push('沿路可能遇到首領：'+trBoss.join('、'));
     if(RCF.safe&&danger!=='ok')return;
-    if(danger==='bad')why.push(`最高 Lv${max} 的怪對你偏強`+(req>ac?`，建議 AC 至少 -${Math.ceil(req)}`:''));
+    if(danger==='bad'&&max>tol)why.push(`最高 Lv${max} 的怪對你偏強`+(req>ac?`，建議 AC 至少 -${Math.ceil(req)}`:''));
     else if(danger==='mid'&&req>ac)why.push(`AC 再到 -${Math.ceil(req)} 會更穩`);
     if(avg<eff-10)why.push('怪物偏弱，經驗效率較低');
     if(boss.length)why.push('有首領出沒：'+boss.map(m=>mobName(m)).join('、'));
