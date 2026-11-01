@@ -229,12 +229,29 @@ ul.moblist li:first-child{border-top:0}
 /* v2.1 地監樓層 */
 .tapmode select.mapsel{width:auto;max-width:150px;font-size:12px;padding:5px 22px 5px 8px;border:0;border-left:1px solid var(--line);border-radius:0;background-color:rgba(18,16,13,.85);color:var(--ink);background-position:calc(100% - 13px) 50%,calc(100% - 8px) 50%}
 .floorbar{display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-top:1px solid var(--line);background:var(--panel)}
+
+/* v2.2 練功推薦 */
+.rcout{display:flex;flex-direction:column;gap:8px}
+.rccard{display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.rchead{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:8px;align-items:center}
+.rcrank{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;border:2px solid var(--gold);color:var(--gold)}
+.rcname{font-weight:700;font-size:15px}
+.rcname small{display:block;font-weight:400;font-size:12px;color:var(--mute)}
+.rcfit{font-size:12px;font-variant-numeric:tabular-nums;color:var(--mute);text-align:right;white-space:nowrap}
+.rcfit b{display:block;font-size:17px;color:var(--ink)}
+.rcbar{height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+.rcbar i{display:block;height:100%;background:var(--gold)}
+.rctags{display:flex;flex-wrap:wrap;gap:4px}
+.rctag{font-size:11.5px;padding:1px 7px;border-radius:3px;border:1px solid var(--line);color:var(--mute)}
+.rctag.ok{color:var(--from);border-color:#3f6b38}.rctag.mid{color:var(--gold);border-color:#7a6230}.rctag.bad{color:var(--to);border-color:#8a3d35}.rctag.afk{color:var(--boat);border-color:#2f6b62}
+.rcwhy{font-size:12.5px;color:var(--mute);line-height:1.55}
+.rcwhy b{color:var(--ink);font-weight:500}
 </style>
 
 <style>body{margin:0}[hidden]{display:none!important}</style></head><body><div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="ver">v2.1.2 · 2026-10-31</span>
+    <span class="ver">v2.2 · 2026-11-01</span>
   </header>
 
   <div class="main">
@@ -286,7 +303,7 @@ ul.moblist li:first-child{border-top:0}
         <button role="tab" id="tbRoute" aria-selected="true" aria-controls="tabRoute">路線</button>
         <button role="tab" id="tbMob" aria-selected="false" aria-controls="tabMob">怪物</button>
         <button role="tab" id="tbItem" aria-selected="false" aria-controls="tabItem">物品／製作</button>
-        <button role="tab" id="tbLog" aria-selected="false" aria-controls="tabLog">記錄</button>
+        <button role="tab" id="tbLog" aria-selected="false" aria-controls="tabLog">練功推薦</button>
       </div>
       <div class="tab" id="tabRoute" role="tabpanel">
       <div class="row">
@@ -338,27 +355,21 @@ ul.moblist li:first-child{border-top:0}
       </div>
       <div class="tab" id="tabLog" role="tabpanel" hidden>
         <div class="lgform">
-          <div class="field"><label for="lgReg">獵場</label><select id="lgReg"></select></div>
           <div class="lgrow2">
-            <div class="field"><label for="lgHrs">掛機時數</label><input class="inp" id="lgHrs" type="number" min="0" step="0.5" inputmode="decimal" placeholder="例：12"></div>
-            <div class="field"><label for="lgGold">金幣收入</label><input class="inp" id="lgGold" type="number" min="0" inputmode="numeric" placeholder="可不填"></div>
+            <div class="field"><label for="rcCls">職業</label><select id="rcCls"><option value="knight">騎士</option><option value="elf">妖精</option><option value="mage">法師</option><option value="royal">王族</option></select></div>
+            <div class="field"><label for="rcLv">等級</label><input class="inp" id="rcLv" type="number" min="1" max="99" inputmode="numeric"></div>
           </div>
-          <div class="sec"><h3>擊殺數（不知道可留空）</h3><div id="lgKills" class="lgkills"></div></div>
-          <div class="sec"><h3>這次掉落</h3>
-            <div class="lgadd"><select id="lgItem" aria-label="掉落物"></select><input class="inp" id="lgQty" type="number" min="1" value="1" inputmode="numeric" aria-label="數量"><button class="go" id="lgAddDrop">加入</button></div>
-            <div id="lgDrops" class="lgdrops"></div>
+          <div class="lgrow2">
+            <div class="field"><label for="rcW">武器強化 +</label><input class="inp" id="rcW" type="number" min="0" max="15" inputmode="numeric"></div>
+            <div class="field"><label for="rcAc">防禦 AC</label><input class="inp" id="rcAc" type="number" inputmode="numeric" placeholder="例：-25"></div>
           </div>
-          <button class="go lgsave" id="lgSave">儲存這次紀錄</button>
+          <div class="mobfilter" role="group" aria-label="篩選">
+            <button class="fchip" data-rcf="afk" aria-pressed="false">只看可離線掛機</button>
+            <button class="fchip" data-rcf="safe" aria-pressed="false">只看安全</button>
+          </div>
         </div>
-        <div class="sec"><h3>統計（全部紀錄累計）</h3><div id="lgStats"></div></div>
-        <div class="sec"><h3>每小時期望收入（依你填的價格）</h3><div id="lgRank"></div></div>
-        <div class="sec"><h3>紀錄列表</h3><div id="lgList"></div></div>
-        <details class="lgio"><summary>備份／搬移紀錄</summary>
-          <p class="ms" style="white-space:normal">紀錄存在「目前這個網站」的瀏覽器裡；書籤在不同網站點開，紀錄不會互通。建議固定在同一個網頁（例如 GitHub Pages 完整版）記錄，或用下面的文字搬移。</p>
-          <textarea id="lgIO" class="inp" rows="4" placeholder="按「匯出」產生備份文字；貼上備份文字後按「匯入」"></textarea>
-          <div class="lgadd"><button class="go" id="lgExport">匯出</button><button class="go" id="lgImport">匯入（合併）</button></div>
-        </details>
-        <p class="note">機率＝掉落次數 ÷ 擊殺數；括號是 95% 可信範圍，樣本越多越準。沒掉過的物品以「低於 3 ÷ 擊殺數」估計上限。價格請填交易所實際成交價。</p>
+        <div id="rcOut" class="rcout"></div>
+        <p class="note">推薦是依樂園怪物等級、數量、不死系比例與掉落物估算的參考值，不是官方數據。AC 數字越負防禦越高，填 -25 或 25 都可以。首領（Lv45 以上）不計入難度，只在備註提醒。</p>
       </div>
     </section>
   </div>
@@ -684,7 +695,7 @@ function showMap(){const mb=document.getElementById('mapbox');if(!mb)return;try{
 function floorBtns(m){const ks=[...new Set(m.r.map(id=>{const n=(MOBRN[id]||[''])[0].replace(/ 獵場$/,'');return FLOORREG[n]}).filter(Boolean))];
   return ks.length?`<div class="sec"><h3>樓層地圖</h3><div class="destmobs">${ks.map(k=>`<button data-floor="${k}">🗺 ${esc(MAPS[k].name)}</button>`).join('')}</div></div>`:''}
 function closeMob(){mobDetail.hidden=true;mobBrowse.hidden=false}
-function showTab(t){[['route','tabRoute','tbRoute'],['mob','tabMob','tbMob'],['item','tabItem','tbItem'],['log','tabLog','tbLog']].forEach(([k,p,b])=>{document.getElementById(p).hidden=k!==t;document.getElementById(b).setAttribute('aria-selected',k===t)});try{localStorage.setItem('l1tab',t)}catch(e){}if(t==='log')renderLogStats()}
+function showTab(t){[['route','tabRoute','tbRoute'],['mob','tabMob','tbMob'],['item','tabItem','tbItem'],['log','tabLog','tbLog']].forEach(([k,p,b])=>{document.getElementById(p).hidden=k!==t;document.getElementById(b).setAttribute('aria-selected',k===t)});try{localStorage.setItem('l1tab',t)}catch(e){}if(t==='log')renderRec()}
 function destMobs(t){const el=document.getElementById('destMobs');if(!el)return;
   const list=MOB.filter(m=>mobNodes(m)[t]);
   el.innerHTML=list.length?'<span>這裡的怪物：</span>'+list.map(m=>`<button data-mk="${m.k}">${esc(mobName(m))} <small>Lv${m.l}</small></button>`).join(''):'';}
@@ -869,8 +880,55 @@ document.getElementById('tabItem').addEventListener('click',e=>{
 document.getElementById('tabItem').addEventListener('change',e=>{if(e.target.id==='itQty'){itQty=Math.max(1,parseInt(e.target.value)||1);openItem(itCur)}});
 renderItemList();
 
+// ===== 練功推薦 =====
+const RCK={knight:{w:1.0,n:'騎士'},elf:{w:0.8,n:'妖精'},mage:{w:0.4,n:'法師'},royal:{w:0.8,n:'王族'}};
+const VALKEY=['魔法書','精靈水晶','品質','項鍊','戒指','腰帶','斗篷','魔法頭盔','技術書'];
+const RCF={afk:false,safe:false};
+function rcState(){try{return JSON.parse(localStorage.getItem('l1rec')||'null')}catch(e){return null}}
+function initRec(){const st=rcState()||{c:'elf',lv:30,w:5,ac:-20};document.getElementById('rcCls').value=st.c;document.getElementById('rcLv').value=st.lv;document.getElementById('rcW').value=st.w;document.getElementById('rcAc').value=st.ac;
+  ['rcCls','rcLv','rcW','rcAc'].forEach(id=>document.getElementById(id).addEventListener('input',renderRec));document.getElementById('rcCls').addEventListener('change',renderRec);
+  document.getElementById('tabLog').addEventListener('click',e=>{const f=e.target.closest('[data-rcf]');if(f){RCF[f.dataset.rcf]=!RCF[f.dataset.rcf];f.setAttribute('aria-pressed',RCF[f.dataset.rcf]);renderRec();return}
+    const g=e.target.closest('[data-go]');if(g){toSel.value=g.dataset.go;showTab('route');render();showMap();return}
+    const fl=e.target.closest('[data-floor]');if(fl){setMap(fl.dataset.floor,true);showMap();return}
+    const k=e.target.closest('[data-mk]');if(k){openMob(k.dataset.mk);return}});}
+function renderRec(){const out=document.getElementById('rcOut');if(!out)return;
+  const c=document.getElementById('rcCls').value,lv=Math.max(1,parseInt(document.getElementById('rcLv').value)||1),w=Math.max(0,parseInt(document.getElementById('rcW').value)||0),ac=Math.abs(parseInt(document.getElementById('rcAc').value)||0);
+  try{localStorage.setItem('l1rec',JSON.stringify({c,lv,w,ac:-ac}))}catch(e){}
+  const eff=lv*0.7+w*RCK[c].w;
+  const rows=[];
+  Object.entries(MOBRN).forEach(([id,[name,cat]])=>{if(name==='妖精森林')return;const ms=MOB.filter(m=>m.r.includes(+id));if(!ms.length)return;
+    const norm=ms.filter(m=>!isBoss(m)),boss=ms.filter(isBoss);if(!norm.length)return;
+    const avg=norm.reduce((a,m)=>a+m.l,0)/norm.length,max=Math.max(...norm.map(m=>m.l)),und=norm.filter(m=>m.u).length/norm.length,big=norm.filter(m=>m.b).length/norm.length;
+    const req=Math.max(0,(max-8)*1.0),afk=cat==='個人獵場';
+    if(RCF.afk&&!afk)return;
+    const val=new Set();norm.forEach(m=>m.d.forEach(([cc,it])=>it.forEach(x=>{if(VALKEY.some(k=>x.includes(k)))val.add(x)})));
+    let sc=100-Math.abs(avg-eff)*4-Math.max(0,max-(eff+6))*6-Math.max(0,req-ac)*2+Math.min(val.size,15)*1.2;const why=[];
+    if(c==='mage'&&und>=0.4){sc+=8;why.push('不死系多，法師的聖潔之光、火球打不死系有利')}
+    if(c==='elf'&&und>=0.4){sc+=6;why.push('不死系多，帶銀箭效率好')}
+    if(c==='elf'&&cat==='野外'){sc+=4;why.push('野外空間大，方便拉怪射擊')}
+    if(c==='knight'&&cat!=='野外'){sc+=4;why.push('地監怪密集，騎士能坦能清')}
+    if(c==='knight'&&big>=0.4){sc-=4;why.push('大型怪偏多，注意武器對大型傷害較低')}
+    if(c==='mage'&&big>=0.5){sc-=4;why.push('大型近戰怪多，法師要注意走位')}
+    if(afk){sc+=5;why.push('個人獵場，可離線掛機最多 12 小時')}
+    const danger=max>eff+8||req-ac>10?'bad':max>eff+3||req>ac?'mid':'ok';
+    if(RCF.safe&&danger!=='ok')return;
+    if(danger==='bad')why.push(`最高 Lv${max} 的怪對你偏強`+(req>ac?`，建議 AC 至少 -${Math.ceil(req)}`:''));
+    else if(danger==='mid'&&req>ac)why.push(`AC 再到 -${Math.ceil(req)} 會更穩`);
+    if(avg<eff-10)why.push('怪物偏弱，經驗效率較低');
+    if(boss.length)why.push('有首領出沒：'+boss.map(m=>mobName(m)).join('、'));
+    const node=(MOBREG[id]||[])[0],floor=FLOORREG[name.replace(/ 獵場$/,'')];
+    rows.push({id,name,cat,sc,avg,max,und,danger,why,val:[...val],norm,node,floor,afk});});
+  rows.sort((a,b)=>b.sc-a.sc);const top=rows.slice(0,8),best=top.length?top[0].sc:100;
+  const dl={ok:'安全',mid:'適中',bad:'危險'};
+  out.innerHTML=top.length?`<div class="ms" style="white-space:normal">${RCK[c].n} Lv${lv}、武器 +${w}、AC -${ac}：估算可應付的怪物等級約 <b style="color:var(--ink)">Lv${Math.round(eff)}</b> 上下。</div>`+top.map((r,i)=>{const pct=Math.max(5,Math.min(100,Math.round(r.sc/Math.max(best,1)*100)));
+    return `<div class="rccard"><div class="rchead"><span class="rcrank">${i+1}</span><div class="rcname">${esc(r.name)}<small>${esc(r.cat)}・怪物 Lv${Math.min(...r.norm.map(m=>m.l))}～${r.max}（平均 ${r.avg.toFixed(0)}）${r.und>=0.4?'・不死系多':''}</small></div><div class="rcfit">適合度<b>${pct}</b></div></div>
+     <div class="rcbar"><i style="width:${pct}%"></i></div>
+     <div class="rctags"><span class="rctag ${r.danger}">${dl[r.danger]}</span>${r.afk?'<span class="rctag afk">可離線掛機</span>':''}${r.val.slice(0,5).map(x=>`<span class="rctag">${esc(x)}</span>`).join('')}${r.val.length>5?`<span class="rctag">等 ${r.val.length} 種好物</span>`:''}</div>
+     ${r.why.length?`<div class="rcwhy">${r.why.map(esc).join('；')}</div>`:''}
+     <div class="destmobs">${r.node&&byId[r.node]?`<button data-go="${r.node}">導航 ➜</button>`:''}${r.floor?`<button data-floor="${r.floor}">🗺 樓層地圖</button>`:''}${r.norm.sort((a,b)=>a.l-b.l).map(m=>`<button data-mk="${m.k}">${esc(mobName(m))} <small>Lv${m.l}</small></button>`).join('')}</div></div>`}).join(''):'<p class="ms" style="white-space:normal">沒有符合條件的地點，試著取消上方的篩選。</p>';}
+
 document.getElementById('tbLog').addEventListener('click',()=>showTab('log'));
-initLog();
+initRec();
 try{const t=localStorage.getItem('l1tab');if(t==='mob'||t==='log'||t==='item')showTab(t)}catch(e){}
 loadImg('main');
 try{const m=JSON.parse(localStorage.getItem('l1me')||'null');if(m&&m.x){document.getElementById('locIn').value=m.x+' '+m.y;me=m;setTimeout(()=>setMe(m,true),0)}}catch(e){}
