@@ -261,7 +261,7 @@ ul.moblist li:first-child{border-top:0}
 <style>body{margin:0}[hidden]{display:none!important}</style></head><body><div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="ver">v2.3 · 2026-11-01</span>
+    <span class="ver">v2.3.1 · 2026-11-01</span>
   </header>
 
   <div class="main">
@@ -381,7 +381,7 @@ ul.moblist li:first-child{border-top:0}
         </div>
         <div id="rcCmp"></div>
         <div id="rcOut" class="rcout"></div>
-        <p class="note">推薦是依樂園怪物等級、數量、不死系比例與掉落物估算的參考值，不是官方數據。每小時經驗、金幣標「估」的是用怪物等級推算（經驗約為等級²＋1、擊殺速度依你的戰力與怪物等級估），只適合比較地點間的高低；掛過之後按「填實測」輸入真實數字，就會改用實測值。AC 數字越負防禦越高，填 -25 或 25 都可以。首領（Lv45 以上）不計入難度，只在備註提醒。</p>
+        <p class="note">已開放離線掛機的 16 個獵場會優先排在前面（危險的除外）。推薦是依樂園怪物等級、數量、不死系比例與掉落物估算的參考值，不是官方數據。每小時經驗、金幣標「估」的是用怪物等級推算（經驗約為等級²＋1、擊殺速度依你的戰力與怪物等級估），只適合比較地點間的高低；掛過之後按「填實測」輸入真實數字，就會改用實測值。AC 數字越負防禦越高，填 -25 或 25 都可以。首領（Lv45 以上）不計入難度，只在備註提醒。</p>
       </div>
     </section>
   </div>
@@ -900,6 +900,7 @@ function travelOf(name,cat){if(cat==='野外')return [];const base=name.replace(
   if(APPROACH[key])out.push(APPROACH[key]);if(mm)for(let k=1;k<+mm[2];k++)out.push(`${key} ${k}樓`);return out}
 const VALKEY=['魔法書','精靈水晶','品質','項鍊','戒指','腰帶','斗篷','魔法頭盔','技術書'];
 const RCF={afk:false,safe:false};
+const AFK_OPEN=new Set(['新手獵場','北島獵場','冒險洞窟 1樓 獵場','冒險洞窟 2樓 獵場','眠龍洞穴 1樓 獵場','眠龍洞穴 3樓 獵場','騎士洞穴 1樓 獵場','騎士洞穴 3樓 獵場','騎士洞穴 4樓 獵場','古魯丁地監 1樓 獵場','古魯丁地監 3樓 獵場','古魯丁地監 6樓 獵場','龍之谷地監 1樓 獵場','龍之谷地監 2樓 獵場','奇岩地監 2樓 獵場','奇岩地監 4樓 獵場']);
 function MEAS(){try{return JSON.parse(localStorage.getItem('l1meas')||'{}')}catch(e){return {}}}
 function fmtW(n){n=Math.round(n);return n>=10000?(n/10000).toFixed(n>=100000?0:1)+' 萬':n.toLocaleString('zh-TW')}
 function logGoldPerHr(id){try{const d=JSON.parse(localStorage.getItem('l1log')||'null');if(!d)return null;let h=0,g=0;(d.sessions||[]).forEach(x=>{if(String(x.reg)===String(id)&&x.hrs>0&&x.gold){h+=x.hrs;g+=x.gold}});return h?g/h:null}catch(e){return null}}
@@ -923,7 +924,7 @@ function renderRec(){const out=document.getElementById('rcOut');if(!out)return;
   Object.entries(MOBRN).forEach(([id,[name,cat]])=>{if(name==='妖精森林')return;const ms=MOB.filter(m=>m.r.includes(+id));if(!ms.length)return;
     const norm=ms.filter(m=>!isBoss(m)),boss=ms.filter(isBoss);if(!norm.length)return;
     const avg=norm.reduce((a,m)=>a+m.l,0)/norm.length,max=Math.max(...norm.map(m=>m.l)),und=norm.filter(m=>m.u).length/norm.length,big=norm.filter(m=>m.b).length/norm.length;
-    const req=Math.max(0,(max-8)*K.acm),afk=cat==='個人獵場';
+    const req=Math.max(0,(max-8)*K.acm),afk=AFK_OPEN.has(name),afkClosed=cat==='個人獵場'&&!afk;
     if(RCF.afk&&!afk)return;
     const val=new Set();norm.forEach(m=>m.d.forEach(([cc,it])=>it.forEach(x=>{if(VALKEY.some(k=>x.includes(k)))val.add(x)})));
     let sc=100-Math.abs(avg-eff)*4-Math.max(0,max-tol)*8-Math.max(0,req-ac)*2.5+Math.min(val.size,15)*1.2;const why=[];
@@ -936,7 +937,8 @@ function renderRec(){const out=document.getElementById('rcOut');if(!out)return;
     if(c==='knight'&&cat!=='野外'){sc+=4;why.push('地監怪密集，騎士能坦能清')}
     if(c==='knight'&&big>=0.4){sc-=4;why.push('大型怪偏多，注意武器對大型傷害較低')}
     if(c==='mage'&&big>=0.5){sc-=4;why.push('大型近戰怪多，法師要注意走位')}
-    if(afk){sc+=5;why.push('個人獵場，可離線掛機最多 12 小時')}
+    if(afk){sc+=15;why.push('已開放離線掛機（優先推薦），最多掛 12 小時')}
+    if(afkClosed)why.push('這個個人獵場目前尚未開放離線掛機');
     let danger=max>tol+4||req-ac>8?'bad':max>tol||req>ac?'mid':'ok';
     if(trMax>tol+4)danger='bad';else if(trMax>tol&&danger==='ok')danger='mid';
     if(danger==='bad')sc-=20;
@@ -953,7 +955,8 @@ function renderRec(){const out=document.getElementById('rcOut');if(!out)return;
     const me=MS[id]||{},lg=logGoldPerHr(id);
     const eh=me.e||kph*expK,gh=me.g||lg||kph*goldShare*goldK;
     rows.push({id,name,cat,sc,avg,max,und,danger,why,val:[...val],norm,node,floor,afk,eh,gh,em:!!me.e,gm:!!(me.g||lg)});});
-  if(sortBy==='exp')rows.sort((a,b)=>(b.danger==='bad'?0:1)-(a.danger==='bad'?0:1)||b.eh-a.eh);else if(sortBy==='gold')rows.sort((a,b)=>(b.danger==='bad'?0:1)-(a.danger==='bad'?0:1)||b.gh-a.gh);else rows.sort((a,b)=>b.sc-a.sc);const top=rows.slice(0,8),best=top.length?top[0].sc:100;
+  const tier=r=>(r.danger==='bad'?0:2)+(r.afk?1:0);
+  if(sortBy==='exp')rows.sort((a,b)=>tier(b)-tier(a)||b.eh-a.eh);else if(sortBy==='gold')rows.sort((a,b)=>tier(b)-tier(a)||b.gh-a.gh);else rows.sort((a,b)=>tier(b)-tier(a)||b.sc-a.sc);const top=rows.slice(0,8),best=top.length?top[0].sc:100;
   const dl={ok:'安全',mid:'適中',bad:'危險'};
   document.getElementById('rcCmp').innerHTML=top.length?`<div class="sec"><h3>效率比較（前 ${top.length} 名）</h3><div class="lgwrap"><table class="lgtbl rccmp"><tr><th>地點</th><th>難度</th><th>經驗／時</th><th>金幣／時</th></tr>${top.map(r=>`<tr data-jump="${r.id}"><td>${esc(r.name)}${r.afk?' <small class="lv">掛機</small>':''}</td><td><span class="rctag ${r.danger}">${dl[r.danger]}</span></td><td class="n"><b>${fmtW(r.eh)}</b>${r.em?'':'<small class="lv">估</small>'}</td><td class="n"><b>${fmtW(r.gh)}</b>${r.gm?'':'<small class="lv">估</small>'}</td></tr>`).join('')}</table></div></div>`:'';
   out.innerHTML=top.length?`<div class="ms" style="white-space:normal">${RCK[c].n} Lv${lv}、武器 +${w}、AC -${ac}：估算可應付的怪物等級約 <b style="color:var(--ink)">Lv${Math.round(eff)}</b> 上下。</div>`+top.map((r,i)=>{const pct=Math.max(5,Math.min(100,Math.round(r.sc/Math.max(best,1)*100)));
