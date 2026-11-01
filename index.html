@@ -246,12 +246,22 @@ ul.moblist li:first-child{border-top:0}
 .rctag.ok{color:var(--from);border-color:#3f6b38}.rctag.mid{color:var(--gold);border-color:#7a6230}.rctag.bad{color:var(--to);border-color:#8a3d35}.rctag.afk{color:var(--boat);border-color:#2f6b62}
 .rcwhy{font-size:12.5px;color:var(--mute);line-height:1.55}
 .rcwhy b{color:var(--ink);font-weight:500}
+
+.rcstat{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.rcstat div{padding:6px 8px;border:1px solid var(--line);border-radius:5px;font-size:12px;color:var(--mute)}
+.rcstat b{display:block;font-size:16px;color:var(--ink);font-variant-numeric:tabular-nums}
+.rcstat i{font-style:normal;font-size:11px;padding:0 5px;border-radius:3px;margin-left:4px;border:1px solid var(--line)}
+.rcstat i.m{color:var(--from);border-color:#3f6b38}
+.rcmeas{display:grid;grid-template-columns:1fr 1fr auto;gap:6px;align-items:end}
+.rcmeas .inp{padding:6px 8px;font-size:15px}
+.rccmp td.n b{color:var(--ink)}
+.rccmp tr[data-jump]{cursor:pointer}
 </style>
 
 <style>body{margin:0}[hidden]{display:none!important}</style></head><body><div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="ver">v2.2.1 · 2026-11-01</span>
+    <span class="ver">v2.3 · 2026-11-01</span>
   </header>
 
   <div class="main">
@@ -367,9 +377,11 @@ ul.moblist li:first-child{border-top:0}
             <button class="fchip" data-rcf="afk" aria-pressed="false">只看可離線掛機</button>
             <button class="fchip" data-rcf="safe" aria-pressed="false">只看安全</button>
           </div>
+          <div class="field"><label for="rcSort">排序</label><select id="rcSort"><option value="fit">綜合適合度</option><option value="exp">每小時經驗</option><option value="gold">每小時金幣</option></select></div>
         </div>
+        <div id="rcCmp"></div>
         <div id="rcOut" class="rcout"></div>
-        <p class="note">推薦是依樂園怪物等級、數量、不死系比例與掉落物估算的參考值，不是官方數據。AC 數字越負防禦越高，填 -25 或 25 都可以。首領（Lv45 以上）不計入難度，只在備註提醒。</p>
+        <p class="note">推薦是依樂園怪物等級、數量、不死系比例與掉落物估算的參考值，不是官方數據。每小時經驗、金幣標「估」的是用怪物等級推算（經驗約為等級²＋1、擊殺速度依你的戰力與怪物等級估），只適合比較地點間的高低；掛過之後按「填實測」輸入真實數字，就會改用實測值。AC 數字越負防禦越高，填 -25 或 25 都可以。首領（Lv45 以上）不計入難度，只在備註提醒。</p>
       </div>
     </section>
   </div>
@@ -888,16 +900,24 @@ function travelOf(name,cat){if(cat==='野外')return [];const base=name.replace(
   if(APPROACH[key])out.push(APPROACH[key]);if(mm)for(let k=1;k<+mm[2];k++)out.push(`${key} ${k}樓`);return out}
 const VALKEY=['魔法書','精靈水晶','品質','項鍊','戒指','腰帶','斗篷','魔法頭盔','技術書'];
 const RCF={afk:false,safe:false};
+function MEAS(){try{return JSON.parse(localStorage.getItem('l1meas')||'{}')}catch(e){return {}}}
+function fmtW(n){n=Math.round(n);return n>=10000?(n/10000).toFixed(n>=100000?0:1)+' 萬':n.toLocaleString('zh-TW')}
+function logGoldPerHr(id){try{const d=JSON.parse(localStorage.getItem('l1log')||'null');if(!d)return null;let h=0,g=0;(d.sessions||[]).forEach(x=>{if(String(x.reg)===String(id)&&x.hrs>0&&x.gold){h+=x.hrs;g+=x.gold}});return h?g/h:null}catch(e){return null}}
+let rcMeasOpen=null;
 function rcState(){try{return JSON.parse(localStorage.getItem('l1rec')||'null')}catch(e){return null}}
-function initRec(){const st=rcState()||{c:'elf',lv:30,w:5,ac:-20};document.getElementById('rcCls').value=st.c;document.getElementById('rcLv').value=st.lv;document.getElementById('rcW').value=st.w;document.getElementById('rcAc').value=st.ac;
+function initRec(){const st=rcState()||{c:'elf',lv:30,w:5,ac:-20};if(st.sort)document.getElementById('rcSort').value=st.sort;document.getElementById('rcSort').addEventListener('change',renderRec);document.getElementById('rcCls').value=st.c;document.getElementById('rcLv').value=st.lv;document.getElementById('rcW').value=st.w;document.getElementById('rcAc').value=st.ac;
   ['rcCls','rcLv','rcW','rcAc'].forEach(id=>document.getElementById(id).addEventListener('input',renderRec));document.getElementById('rcCls').addEventListener('change',renderRec);
   document.getElementById('tabLog').addEventListener('click',e=>{const f=e.target.closest('[data-rcf]');if(f){RCF[f.dataset.rcf]=!RCF[f.dataset.rcf];f.setAttribute('aria-pressed',RCF[f.dataset.rcf]);renderRec();return}
     const g=e.target.closest('[data-go]');if(g){toSel.value=g.dataset.go;showTab('route');render();showMap();return}
     const fl=e.target.closest('[data-floor]');if(fl){setMap(fl.dataset.floor,true);showMap();return}
-    const k=e.target.closest('[data-mk]');if(k){openMob(k.dataset.mk);return}});}
+    const k=e.target.closest('[data-mk]');if(k){openMob(k.dataset.mk);return}
+    const ms=e.target.closest('[data-meas]');if(ms){rcMeasOpen=rcMeasOpen===ms.dataset.meas?null:ms.dataset.meas;renderRec();return}
+    const sv=e.target.closest('[data-meassave]');if(sv){const id=sv.dataset.meassave,M=MEAS(),ex=parseFloat(document.getElementById('me_e').value),go=parseFloat(document.getElementById('me_g').value);
+      if(ex>0||go>0)M[id]={e:ex>0?ex:null,g:go>0?go:null};else delete M[id];try{localStorage.setItem('l1meas',JSON.stringify(M))}catch(_){}rcMeasOpen=null;renderRec();showToast('已儲存實測數字');return}
+    const j=e.target.closest('[data-jump]');if(j){const c=document.getElementById('rc_'+j.dataset.jump);if(c)c.scrollIntoView({block:'start',behavior:'smooth'})}});}
 function renderRec(){const out=document.getElementById('rcOut');if(!out)return;
   const c=document.getElementById('rcCls').value,lv=Math.max(1,parseInt(document.getElementById('rcLv').value)||1),w=Math.max(0,parseInt(document.getElementById('rcW').value)||0),ac=Math.abs(parseInt(document.getElementById('rcAc').value)||0);
-  try{localStorage.setItem('l1rec',JSON.stringify({c,lv,w,ac:-ac}))}catch(e){}
+  const sortBy=document.getElementById('rcSort').value;try{localStorage.setItem('l1rec',JSON.stringify({c,lv,w,ac:-ac,sort:sortBy}))}catch(e){}const MS=MEAS();
   const K=RCK[c],eff=lv*0.6+w*K.w,tol=eff+K.tol;
   const rows=[];
   Object.entries(MOBRN).forEach(([id,[name,cat]])=>{if(name==='妖精森林')return;const ms=MOB.filter(m=>m.r.includes(+id));if(!ms.length)return;
@@ -928,15 +948,22 @@ function renderRec(){const out=document.getElementById('rcOut');if(!out)return;
     if(avg<eff-10)why.push('怪物偏弱，經驗效率較低');
     if(boss.length)why.push('有首領出沒：'+boss.map(m=>mobName(m)).join('、'));
     const node=(MOBREG[id]||[])[0],floor=FLOORREG[name.replace(/ 獵場$/,'')];
-    rows.push({id,name,cat,sc,avg,max,und,danger,why,val:[...val],norm,node,floor,afk});});
-  rows.sort((a,b)=>b.sc-a.sc);const top=rows.slice(0,8),best=top.length?top[0].sc:100;
+    const kph=Math.max(40,Math.min(720,240*Math.pow((eff+5)/(avg+5),2)))*(afk?1.15:1)*(danger==='bad'?0.6:1);
+    const expK=norm.reduce((a,m)=>a+m.l*m.l+1,0)/norm.length,goldShare=norm.filter(m=>m.d.some(([cc,it])=>it.includes('金幣'))).length/norm.length,goldK=norm.reduce((a,m)=>a+3*m.l+10,0)/norm.length;
+    const me=MS[id]||{},lg=logGoldPerHr(id);
+    const eh=me.e||kph*expK,gh=me.g||lg||kph*goldShare*goldK;
+    rows.push({id,name,cat,sc,avg,max,und,danger,why,val:[...val],norm,node,floor,afk,eh,gh,em:!!me.e,gm:!!(me.g||lg)});});
+  if(sortBy==='exp')rows.sort((a,b)=>(b.danger==='bad'?0:1)-(a.danger==='bad'?0:1)||b.eh-a.eh);else if(sortBy==='gold')rows.sort((a,b)=>(b.danger==='bad'?0:1)-(a.danger==='bad'?0:1)||b.gh-a.gh);else rows.sort((a,b)=>b.sc-a.sc);const top=rows.slice(0,8),best=top.length?top[0].sc:100;
   const dl={ok:'安全',mid:'適中',bad:'危險'};
+  document.getElementById('rcCmp').innerHTML=top.length?`<div class="sec"><h3>效率比較（前 ${top.length} 名）</h3><div class="lgwrap"><table class="lgtbl rccmp"><tr><th>地點</th><th>難度</th><th>經驗／時</th><th>金幣／時</th></tr>${top.map(r=>`<tr data-jump="${r.id}"><td>${esc(r.name)}${r.afk?' <small class="lv">掛機</small>':''}</td><td><span class="rctag ${r.danger}">${dl[r.danger]}</span></td><td class="n"><b>${fmtW(r.eh)}</b>${r.em?'':'<small class="lv">估</small>'}</td><td class="n"><b>${fmtW(r.gh)}</b>${r.gm?'':'<small class="lv">估</small>'}</td></tr>`).join('')}</table></div></div>`:'';
   out.innerHTML=top.length?`<div class="ms" style="white-space:normal">${RCK[c].n} Lv${lv}、武器 +${w}、AC -${ac}：估算可應付的怪物等級約 <b style="color:var(--ink)">Lv${Math.round(eff)}</b> 上下。</div>`+top.map((r,i)=>{const pct=Math.max(5,Math.min(100,Math.round(r.sc/Math.max(best,1)*100)));
-    return `<div class="rccard"><div class="rchead"><span class="rcrank">${i+1}</span><div class="rcname">${esc(r.name)}<small>${esc(r.cat)}・怪物 Lv${Math.min(...r.norm.map(m=>m.l))}～${r.max}（平均 ${r.avg.toFixed(0)}）${r.und>=0.4?'・不死系多':''}</small></div><div class="rcfit">適合度<b>${pct}</b></div></div>
+    return `<div class="rccard" id="rc_${r.id}"><div class="rchead"><span class="rcrank">${i+1}</span><div class="rcname">${esc(r.name)}<small>${esc(r.cat)}・怪物 Lv${Math.min(...r.norm.map(m=>m.l))}～${r.max}（平均 ${r.avg.toFixed(0)}）${r.und>=0.4?'・不死系多':''}</small></div><div class="rcfit">適合度<b>${pct}</b></div></div>
      <div class="rcbar"><i style="width:${pct}%"></i></div>
      <div class="rctags"><span class="rctag ${r.danger}">${dl[r.danger]}</span>${r.afk?'<span class="rctag afk">可離線掛機</span>':''}${r.val.slice(0,5).map(x=>`<span class="rctag">${esc(x)}</span>`).join('')}${r.val.length>5?`<span class="rctag">等 ${r.val.length} 種好物</span>`:''}</div>
+     <div class="rcstat"><div>每小時經驗<b>${fmtW(r.eh)}</b><i class="${r.em?'m':''}">${r.em?'實測':'估'}</i></div><div>每小時金幣<b>${fmtW(r.gh)}</b><i class="${r.gm?'m':''}">${r.gm?'實測':'估'}</i></div></div>
+     ${rcMeasOpen===r.id?`<div class="rcmeas"><div class="field"><label for="me_e">實測經驗／時</label><input class="inp" id="me_e" type="number" min="0" inputmode="numeric" value="${(MS[r.id]||{}).e||''}"></div><div class="field"><label for="me_g">實測金幣／時</label><input class="inp" id="me_g" type="number" min="0" inputmode="numeric" value="${(MS[r.id]||{}).g||''}"></div><button class="go" data-meassave="${r.id}">儲存</button></div>`:''}
      ${r.why.length?`<div class="rcwhy">${r.why.map(esc).join('；')}</div>`:''}
-     <div class="destmobs">${r.node&&byId[r.node]?`<button data-go="${r.node}">導航 ➜</button>`:''}${r.floor?`<button data-floor="${r.floor}">🗺 樓層地圖</button>`:''}${r.norm.sort((a,b)=>a.l-b.l).map(m=>`<button data-mk="${m.k}">${esc(mobName(m))} <small>Lv${m.l}</small></button>`).join('')}</div></div>`}).join(''):'<p class="ms" style="white-space:normal">沒有符合條件的地點，試著取消上方的篩選。</p>';}
+     <div class="destmobs"><button data-meas="${r.id}">${rcMeasOpen===r.id?'取消':'填實測'}</button>${r.node&&byId[r.node]?`<button data-go="${r.node}">導航 ➜</button>`:''}${r.floor?`<button data-floor="${r.floor}">🗺 樓層地圖</button>`:''}${r.norm.sort((a,b)=>a.l-b.l).map(m=>`<button data-mk="${m.k}">${esc(mobName(m))} <small>Lv${m.l}</small></button>`).join('')}</div></div>`}).join(''):'<p class="ms" style="white-space:normal">沒有符合條件的地點，試著取消上方的篩選。</p>';}
 
 document.getElementById('tbLog').addEventListener('click',()=>showTab('log'));
 initRec();
