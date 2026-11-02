@@ -111,6 +111,9 @@ ul.moblist li:first-child{border-top:0}
 .mimg{width:40px;height:40px;border-radius:6px;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;overflow:hidden;font-size:15px;color:var(--gold);font-weight:700}
 .mimg img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
 .mn{font-weight:700}
+.mob > span:not(.mimg):not(.lv){display:block;min-width:0;overflow:hidden}
+.mob .ms{display:block;max-width:100%}
+.mob .mn{display:inline}
 .ms{font-size:12px;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ms mark,.dropchip mark{background:none;color:var(--gold);font-weight:700}
 .lv{font-size:12px;color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -280,7 +283,7 @@ ul.moblist li:first-child{border-top:0}
 <style>body{margin:0}[hidden]{display:none!important}</style></head><body><div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="ver">v2.5 · 2026-11-02</span>
+    <span class="ver">v2.5.1 · 2026-11-02</span>
   </header>
 
   <div class="main">
