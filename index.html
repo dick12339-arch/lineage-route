@@ -278,25 +278,12 @@ ul.moblist li:first-child{border-top:0}
 .bossrow .inp{padding:5px 6px;font-size:13px}
 .bossrow .lnk{font:inherit;font-weight:700;background:none;border:0;padding:0;color:var(--ink);cursor:pointer;text-align:left}
 .bossrow .lnk:hover{color:var(--gold)}
-
-/* v2.6 版面切換 */
-.hdr-r{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.laybtn{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
-.laybtn button{font:inherit;font-size:12px;padding:4px 10px;border:0;background:var(--bg);color:var(--mute);cursor:pointer}
-.laybtn button[aria-pressed="true"]{background:var(--gold);color:#1a140a;font-weight:700}
-.wrap.lay-land{max-width:none}
-.wrap.lay-land .main{grid-template-columns:minmax(0,1.55fr) minmax(340px,1fr)!important}
-.wrap.lay-land .panel{order:0!important;max-height:calc(100vh - 110px);overflow:auto}
-.wrap.lay-land .mapbox{position:sticky;top:8px}
-.wrap.lay-land .mapview{height:calc(100vh - 300px)!important;min-height:300px}
-.wrap.lay-port .main{grid-template-columns:minmax(0,1fr)!important}
-.wrap.lay-port .panel{order:-1!important}
 </style>
 
 <style>body{margin:0}[hidden]{display:none!important}</style></head><body><div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="hdr-r"><span class="laybtn" role="group" aria-label="版面"><button data-lay="auto" aria-pressed="true">自動</button><button data-lay="port" aria-pressed="false">直版</button><button data-lay="land" aria-pressed="false">橫版</button></span><span class="ver">v2.6 · 2026-11-04</span></span>
+    <span class="ver">v2.6.1 · 2026-11-04</span>
   </header>
 
   <div class="main">
@@ -1100,15 +1087,6 @@ TT.addEventListener('change',e=>{const t=e.target;
 document.getElementById('tbLog').addEventListener('click',()=>showTab('log'));
 initRec();
 try{const t=localStorage.getItem('l1tab');if(t==='mob'||t==='log'||t==='item'||t==='tool')showTab(t)}catch(e){}
-// ===== 版面切換（自動／直版／橫版）=====
-const WRAP=document.getElementById('mapbox').closest('.wrap');
-function applyLay(v){if(!['auto','port','land'].includes(v))v='auto';WRAP.classList.toggle('lay-land',v==='land');WRAP.classList.toggle('lay-port',v==='port');
-  WRAP.querySelectorAll('[data-lay]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lay===v));try{localStorage.setItem('l1lay',v)}catch(e){}
-  try{WRAP.dispatchEvent(new CustomEvent('l1lay',{detail:v,bubbles:true,composed:true}))}catch(e){}setTimeout(()=>{try{focusRoute()}catch(e){}},60);}
-WRAP.addEventListener('click',e=>{const b=e.target.closest('[data-lay]');if(b)applyLay(b.dataset.lay)});
-document.addEventListener('l1setlay',e=>applyLay(e.detail));
-try{applyLay(localStorage.getItem('l1lay')||'auto')}catch(e){applyLay('auto')}
-
 loadImg('main');
 try{const m=JSON.parse(localStorage.getItem('l1me')||'null');if(m&&m.x){document.getElementById('locIn').value=m.x+' '+m.y;me=m;setTimeout(()=>setMe(m,true),0)}}catch(e){}
 render();
