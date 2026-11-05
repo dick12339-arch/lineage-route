@@ -283,7 +283,7 @@ ul.moblist li:first-child{border-top:0}
 <style>body{margin:0}[hidden]{display:none!important}</style></head><body><div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="ver">v2.6.1 · 2026-11-04</span>
+    <span class="ver">v2.7 · 2026-11-05</span>
   </header>
 
   <div class="main">
@@ -364,6 +364,11 @@ ul.moblist li:first-child{border-top:0}
             <button class="fchip" data-f="b" aria-pressed="false">大型</button>
             <button class="fchip" data-f="boss" aria-pressed="false">首領</button>
             <span class="mobcount" id="mobCount"></span>
+          </div>
+          <div class="rc" id="mobLocBox">
+            <div class="ms" style="white-space:normal">輸入座標查這裡的怪物與掉落（地監請在後面加地圖編號）</div>
+            <div class="lgadd" style="grid-template-columns:minmax(0,1fr) auto auto"><input class="inp" id="mobLoc" inputmode="numeric" placeholder="例：33430 32815　或　32750 32800 9" autocomplete="off"><button class="go" id="mobLocGo">查詢</button><button class="go" id="mobLocMe">用我的位置</button></div>
+            <div id="mobLocOut"></div>
           </div>
           <ul class="moblist" id="mobList"></ul>
         </div>
@@ -753,10 +758,11 @@ mobArea.addEventListener('change',()=>{closeMob();renderMobList()});
 document.getElementById('tabMob').addEventListener('click',e=>{
   const f=e.target.closest('.fchip');if(f){F[f.dataset.f]=!F[f.dataset.f];f.setAttribute('aria-pressed',F[f.dataset.f]);renderMobList();return}
   const fl=e.target.closest('[data-floor]');if(fl){setMap(fl.dataset.floor,true);showMap();return}
+  const lg=e.target.closest('#mobLocOut [data-go]');if(lg){toSel.value=lg.dataset.go;showTab('route');render();showMap();return}
   const di=e.target.closest('.dropchip[data-it]');if(di){itQty=1;openItem(di.dataset.it);return}
   const b=e.target.closest('.mob');if(b){openMob(b.dataset.k);return}
   if(e.target.closest('#mobBack')){closeMob();return}
-  const g=e.target.closest('.go');if(g){toSel.value=g.dataset.go;showTab('route');render();showMap();}
+  const g=e.target.closest('[data-go]');if(g){toSel.value=g.dataset.go;showTab('route');render();showMap();}
 });
 document.getElementById('destMobs').addEventListener('click',e=>{const b=e.target.closest('button[data-mk]');if(b)openMob(b.dataset.mk)});
 renderMobList();
@@ -1087,6 +1093,35 @@ TT.addEventListener('change',e=>{const t=e.target;
 document.getElementById('tbLog').addEventListener('click',()=>showTab('log'));
 initRec();
 try{const t=localStorage.getItem('l1tab');if(t==='mob'||t==='log'||t==='item'||t==='tool')showTab(t)}catch(e){}
+// ===== 座標查怪 =====
+const FIELD_NODES=(()=>{const S={};Object.entries(MOBRN).forEach(([id,[nm,cat]])=>{if(cat!=='野外')return;const v=MOBREG[id];if(!v)return;const nd=v[0];(S[nd]=S[nd]||[]).push(id)});return S})();
+function mobsInRegionIds(ids){return MOB.filter(m=>m.r.some(r=>ids.includes(String(r))))}
+function locLookup(loc){
+  if(loc.id!=null&&loc.id!==0&&loc.id!==4){const k='m'+loc.id;if(!MAPS[k])return {err:`找不到地圖編號 ${loc.id}。`};
+    const reg=Object.keys(FLOORREG).find(r=>FLOORREG[r]===k);if(!reg)return {title:MAPS[k].name,note:'這張地圖目前沒有怪物資料。',mobs:[],floor:k};
+    const ids=Object.keys(MOBRN).filter(id=>MOBRN[id][0]===reg||MOBRN[id][0]===reg+' 獵場'||MOBRN[id][0]===reg+' 副本');
+    return {title:MAPS[k].name,note:'地監整層的怪物（樓層內不分區）。',mobs:mobsInRegionIds(ids),floor:k,entry:MAPS[k].entry}}
+  const m=loc.id===0?'ti':loc.id===4?'main':(inMap('main',loc.x,loc.y)?'main':inMap('ti',loc.x,loc.y)?'ti':null);
+  if(!m)return {err:'這個座標不在本土或說話之島地圖內；若在地監，請在座標後面加地圖編號。'};
+  const cand=Object.keys(FIELD_NODES).map(nd=>byId[nd]).filter(o=>o&&nodeMap(o)===m).map(o=>({o,d:dist(o,loc)})).sort((a,b)=>a.d-b.d);
+  if(!cand.length)return {err:'附近沒有野外怪物資料。'};
+  const pick=[cand[0]];if(cand[1]&&cand[1].d<cand[0].d*1.3)pick.push(cand[1]);
+  const ids=[...new Set(pick.flatMap(c=>FIELD_NODES[c.o.id]))];
+  const near=N.filter(o=>o.t==='spot'&&nodeMap(o)===m).map(o=>({o,d:dist(o,loc)})).filter(x=>x.d<60).sort((a,b)=>a.d-b.d).slice(0,2);
+  return {title:pick.map(c=>(MOBRN[FIELD_NODES[c.o.id][0]]||[c.o.n])[0]+' 一帶').join('／'),note:`以最近的地區估算（${pick.map(c=>c.o.n+' 約 '+c.d+' 格').join('、')}）；野外資料只分到地區，不分到精確位置。`,mobs:mobsInRegionIds(ids),near}}
+function renderLocMobs(loc){const out=document.getElementById('mobLocOut'),r=locLookup(loc);
+  if(r.err){out.innerHTML=`<p class="ms" style="white-space:normal;color:var(--to)">${esc(r.err)}</p>`;return}
+  const ms=r.mobs.slice().sort((a,b)=>a.l-b.l);
+  out.innerHTML=`<div class="sec" style="margin-top:8px"><h3>(${loc.x}, ${loc.y}${loc.id!=null?', '+loc.id:''})：${esc(r.title)}・${ms.length} 種怪</h3>
+    <div class="ms" style="white-space:normal">${esc(r.note)}</div>
+    ${r.near&&r.near.length?`<div class="destmobs" style="margin-top:6px"><span>附近入口：</span>${r.near.map(x=>`<button data-go="${x.o.id}">${esc(x.o.n)} 約 ${x.d} 格</button>`).join('')}</div>`:''}
+    ${r.floor||r.entry?`<div class="destmobs" style="margin-top:6px">${r.floor?`<button data-floor="${r.floor}">🗺 看這層地圖</button>`:''}${r.entry&&byId[r.entry]?`<button data-go="${r.entry}">導航到入口 ➜</button>`:''}</div>`:''}
+    <ul class="moblist">${ms.map(m=>{const items=[];m.d.forEach(([c,it])=>it.forEach(x=>{if(x!=='金幣')items.push(x)}));const val=items.filter(x=>VALKEY.some(k=>x.includes(k)));const show=[...val,...items.filter(x=>!val.includes(x))].slice(0,6);
+      return `<li><button class="mob" data-k="${m.k}">${icon(m)}<span style="min-width:0"><span class="mn">${esc(mobName(m))}</span>${tags(m)}<span class="ms">${esc(show.join('、'))}${items.length>6?` 等 ${items.length} 種`:''}</span></span><span class="lv">Lv ${m.l}</span></button></li>`}).join('')||'<li class="ms">這裡沒有怪物資料</li>'}</ul></div>`;}
+document.getElementById('mobLocGo').addEventListener('click',()=>{const l=parseLoc(document.getElementById('mobLoc').value);if(!l){showToast('請輸入兩組 5 位數座標，例如 33430 32815');return}renderLocMobs(l)});
+document.getElementById('mobLoc').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById('mobLocGo').click()}});
+document.getElementById('mobLocMe').addEventListener('click',()=>{if(!me){showToast('先在地圖下方輸入 /loc 標示我的位置');return}const id=MAPS[me.m]?MAPS[me.m].id:null;document.getElementById('mobLoc').value=me.x+' '+me.y+(id!=null&&id!==4?' '+id:'');renderLocMobs({x:me.x,y:me.y,id})});
+
 loadImg('main');
 try{const m=JSON.parse(localStorage.getItem('l1me')||'null');if(m&&m.x){document.getElementById('locIn').value=m.x+' '+m.y;me=m;setTimeout(()=>setMe(m,true),0)}}catch(e){}
 render();
