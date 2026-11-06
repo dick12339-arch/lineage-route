@@ -292,7 +292,7 @@ ul.moblist li:first-child{border-top:0}
 <style>body{margin:0}[hidden]{display:none!important}</style></head><body><div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="ver">v2.8 · 2026-11-05</span>
+    <span class="ver">v2.9 · 2026-11-06</span>
   </header>
 
   <div class="main">
@@ -380,6 +380,7 @@ ul.moblist li:first-child{border-top:0}
             <div class="lgadd" style="grid-template-columns:minmax(0,1fr) auto auto"><input class="inp" id="mobLoc" inputmode="numeric" placeholder="例：33430 32815　或　32750 32800 9" autocomplete="off"><button class="go" id="mobLocGo">查詢</button><button class="go" id="mobLocMe">用上次標示的位置</button></div>
             <div id="mobLocOut"></div>
           </div>
+          <div class="rc" id="spawnBox"></div>
           <ul class="moblist" id="mobList"></ul>
         </div>
         <div id="mobDetail" class="tab" hidden></div>
@@ -616,6 +617,7 @@ function draw(){const v=VIEW[curMap];if(!v)return;layer.style.transform=`transla
     el('circle',{cx:x,cy:y,r:big?9:o.t==='town'?7:5},g);
     const right=x<cw()-120,tx=el('text',{x:x+(right?11:-11),y:y+4,'text-anchor':right?'start':'end'},g);tx.textContent=o.n;});
   if(HL){const G=el('g',{class:'hl'});(HL.nodes||[]).forEach(id=>{const o=byId[id];if(!o||nodeMap(o)!==curMap)return;const [x,y]=scr(...toPx(curMap,o.x,o.y));el('circle',{cx:x,cy:y,r:15,class:'hlp'},G);el('circle',{cx:x,cy:y,r:15,class:'hlr'},G)});
+    (HL.pts||[]).forEach(q=>{if(q.m!==curMap)return;const [x,y]=scr(...toPx(curMap,q.x,q.y));el('circle',{cx:x,cy:y,r:13,class:'hlp'},G);el('circle',{cx:x,cy:y,r:7,class:'hlpin'},G);if(q.lab){const t=el('text',{x:x+11,y:y-8,class:'xmap',style:'fill:#ffd2cc'},G);t.textContent=q.lab}});
     if(HL.pt&&HL.pt.m===curMap){const [x,y]=scr(...toPx(curMap,HL.pt.x,HL.pt.y));el('circle',{cx:x,cy:y,r:14,class:'hlp'},G);el('path',{d:`M${x} ${y} l-10 -22 a11 11 0 1 1 20 0 z`,class:'hlpin'},G);el('circle',{cx:x,cy:y-25,r:4,fill:'#fff'},G)}}
   if(me&&me.m===curMap){const [x,y]=scr(...toPx(curMap,me.x,me.y)),g=el('g',{class:'me'});el('circle',{cx:x,cy:y,r:10,class:'ring'},g);el('circle',{cx:x,cy:y,r:7,class:'dot'},g);}
 }
@@ -751,7 +753,7 @@ function openMob(k){const m=mobByK[k];if(!m)return;const q=mobQ.value.trim(),g=m
    <div class="mdhead">${icon(m)}<div><h2>${esc(mobName(m))}</h2><span class="lv">Lv ${m.l}</span>${tags(m)}</div></div>
    <div class="sec"><h3 style="display:flex;justify-content:space-between;align-items:center;gap:8px">出沒地點<button class="go" data-showmap="1" style="font-size:12px;padding:4px 10px">📍 在地圖上看</button></h3><div class="where">${Object.entries(g).map(([id,labs])=>`<div class="wrow"><div><b>${esc(byId[id].n)}</b><span>${esc([...new Set(labs)].join('、'))}</span></div><button class="go" data-go="${id}">導航 ➜</button></div>`).join('')||'<span class="ms">資料未列出地點</span>'}</div></div>
    ${floorBtns(m)}<div class="sec"><h3>掉落物</h3><div class="drops">${m.d.length?m.d.map(([c,it])=>`<div class="dcat"><i>${esc(c)}</i><div>${it.map(x=>`<button class="dropchip" data-it="${esc(x)}">${hl(x,q)}</button>`).join('')}</div></div>`).join(''):'<span class="ms">資料未列出掉落物</span>'}</div></div>`;
-  mobBrowse.hidden=true;mobDetail.hidden=false;showTab('mob');{const nd=Object.keys(mobNodes(m));setHL({nodes:nd,label:`${mobName(m)} 出沒 ${nd.length} 處`},true)}mobDetail.scrollIntoView&&mobDetail.scrollIntoView({block:'nearest'});
+  mobBrowse.hidden=true;mobDetail.hidden=false;showTab('mob');{const sp=spawnPts(m);if(sp.length)setHL({pts:sp,label:`${mobName(m)} 實際出沒 ${sp.length} 點`},true);else{const nd=Object.keys(mobNodes(m));setHL({nodes:nd,label:`${mobName(m)} 出沒 ${nd.length} 區（只知道地區）`},true)}}mobDetail.scrollIntoView&&mobDetail.scrollIntoView({block:'nearest'});
 }
 function showMap(){const mb=document.getElementById('mapbox');if(!mb)return;try{mb.dispatchEvent(new CustomEvent('l1nav',{bubbles:true,composed:true}))}catch(e){}
   setTimeout(()=>{try{mb.scrollIntoView({block:'start',behavior:'smooth'})}catch(e){mb.scrollIntoView()}},80);}
@@ -1116,6 +1118,8 @@ function locLookup(loc){
     return {title:MAPS[k].name,note:'地監整層的怪物（樓層內不分區）。',mobs:mobsInRegionIds(ids),floor:k,entry:MAPS[k].entry}}
   const m=loc.id===0?'ti':loc.id===4?'main':(inMap('main',loc.x,loc.y)?'main':inMap('ti',loc.x,loc.y)?'ti':null);
   if(!m)return {err:'這個座標不在本土或說話之島地圖內；若在地監，請在座標後面加地圖編號。'};
+  if(SPAWN&&m==='main'){const near=[];MOB.forEach(mo=>{const ps=spawnPts(mo);if(!ps.length)return;let best=1e9,bp=null;ps.forEach(q=>{const d=Math.round(Math.hypot(q.x-loc.x,q.y-loc.y));if(d<best){best=d;bp=q}});if(best<=SPAWN_R)near.push({mo,d:best,q:bp})});
+    if(near.length){near.sort((a,b)=>a.d-b.d);return {mapKey:m,title:`實際出沒點 ${SPAWN_R} 格內`,note:'依匯入的 lcinfo 出沒點計算，距離是到最近一個出沒點的格數。',mobs:near.map(x=>x.mo),dist:Object.fromEntries(near.map(x=>[x.mo.k,x.d])),pts:near.map(x=>({m,x:x.q.x,y:x.q.y,lab:mobName(x.mo)}))}}}
   const cand=Object.keys(FIELD_NODES).map(nd=>byId[nd]).filter(o=>o&&nodeMap(o)===m).map(o=>({o,d:dist(o,loc)})).sort((a,b)=>a.d-b.d);
   if(!cand.length)return {err:'附近沒有野外怪物資料。'};
   const pick=[cand[0]];if(cand[1]&&cand[1].d<cand[0].d*1.3)pick.push(cand[1]);
@@ -1124,14 +1128,14 @@ function locLookup(loc){
   return {nodes:pick.map(c=>c.o.id),mapKey:m,title:pick.map(c=>(MOBRN[FIELD_NODES[c.o.id][0]]||[c.o.n])[0]+' 一帶').join('／'),note:`以最近的地區估算（${pick.map(c=>c.o.n+' 約 '+c.d+' 格').join('、')}）；野外資料只分到地區，不分到精確位置。`,mobs:mobsInRegionIds(ids),near}}
 function renderLocMobs(loc){const out=document.getElementById('mobLocOut'),r=locLookup(loc);
   if(r.err){out.innerHTML=`<p class="ms" style="white-space:normal;color:var(--to)">${esc(r.err)}</p>`;return}
-  const ms=r.mobs.slice().sort((a,b)=>a.l-b.l);
-  const pm=r.floor||r.mapKey;if(pm)setHL({map:pm,pt:{m:pm,x:loc.x,y:loc.y},nodes:r.nodes||[],label:`(${loc.x}, ${loc.y}) ${r.title}`},true);
+  const ms=r.dist?r.mobs.slice():r.mobs.slice().sort((a,b)=>a.l-b.l);
+  const pm=r.floor||r.mapKey;if(pm)setHL({map:pm,pt:{m:pm,x:loc.x,y:loc.y},nodes:r.nodes||[],pts:r.pts||[],label:`(${loc.x}, ${loc.y}) ${r.title}`},true);
   out.innerHTML=`<div class="sec" style="margin-top:8px"><h3>(${loc.x}, ${loc.y}${loc.id!=null?', '+loc.id:''})：${esc(r.title)}・${ms.length} 種怪</h3>
     <div class="ms" style="white-space:normal">${esc(r.note)}</div>
     <div class="destmobs" style="margin-top:6px"><button data-showmap="1">📍 在地圖上看</button></div>${r.near&&r.near.length?`<div class="destmobs" style="margin-top:6px"><span>附近入口：</span>${r.near.map(x=>`<button data-go="${x.o.id}">${esc(x.o.n)} 約 ${x.d} 格</button>`).join('')}</div>`:''}
     ${r.floor||r.entry?`<div class="destmobs" style="margin-top:6px">${r.floor?`<button data-floor="${r.floor}">🗺 看這層地圖</button>`:''}${r.entry&&byId[r.entry]?`<button data-go="${r.entry}">導航到入口 ➜</button>`:''}</div>`:''}
     <ul class="moblist">${ms.map(m=>{const items=[];m.d.forEach(([c,it])=>it.forEach(x=>{if(x!=='金幣')items.push(x)}));const val=items.filter(x=>VALKEY.some(k=>x.includes(k)));const show=[...val,...items.filter(x=>!val.includes(x))].slice(0,6);
-      return `<li><button class="mob" data-k="${m.k}">${icon(m)}<span style="min-width:0"><span class="mn">${esc(mobName(m))}</span>${tags(m)}<span class="ms">${esc(show.join('、'))}${items.length>6?` 等 ${items.length} 種`:''}</span></span><span class="lv">Lv ${m.l}</span></button></li>`}).join('')||'<li class="ms">這裡沒有怪物資料</li>'}</ul></div>`;}
+      return `<li><button class="mob" data-k="${m.k}">${icon(m)}<span style="min-width:0"><span class="mn">${esc(mobName(m))}</span>${tags(m)}<span class="ms">${esc(show.join('、'))}${items.length>6?` 等 ${items.length} 種`:''}</span></span><span class="lv">Lv ${m.l}${r.dist?`<br>${r.dist[m.k]} 格`:''}</span></button></li>`}).join('')||'<li class="ms">這裡沒有怪物資料</li>'}</ul></div>`;}
 document.getElementById('mobLocGo').addEventListener('click',()=>{const l=parseLoc(document.getElementById('mobLoc').value);if(!l){showToast('請輸入兩組 5 位數座標，例如 33430 32815');return}renderLocMobs(l)});
 document.getElementById('mobLoc').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById('mobLocGo').click()}});
 document.getElementById('mobLocMe').addEventListener('click',()=>{if(!me){showToast('還沒標示過位置：請直接在上面輸入現在的 /loc 座標');return}const id=MAPS[me.m]?MAPS[me.m].id:null;document.getElementById('mobLoc').value=me.x+' '+me.y+(id!=null&&id!==4?' '+id:'');renderLocMobs({x:me.x,y:me.y,id});
@@ -1143,12 +1147,24 @@ document.getElementById('mobLocMe').addEventListener('click',()=>{if(!me){showTo
 function setHL(obj,focus){HL=obj;const tag=document.getElementById('hlTag');
   if(!HL){tag.hidden=true;draw();return}
   tag.innerHTML=`<b>📍 ${esc(HL.label)}</b><button aria-label="清除地圖標示">✕</button>`;tag.hidden=false;
-  if(focus){let m=HL.map;if(!m){const ms=(HL.nodes||[]).map(id=>byId[id]).filter(Boolean).map(nodeMap).filter(Boolean);m=ms.includes(curMap)?curMap:ms.includes('main')?'main':ms[0]||(HL.floors&&HL.floors[0])||curMap}
+  if(focus){let m=HL.map;if(!m){const ms=(HL.nodes||[]).map(id=>byId[id]).filter(Boolean).map(nodeMap).filter(Boolean).concat((HL.pts||[]).map(q=>q.m));m=ms.includes(curMap)?curMap:ms.includes('main')?'main':ms[0]||(HL.floors&&HL.floors[0])||curMap}
     if(curMap!==m){curMap=m;setMap(m,false)}
-    const pts=(HL.nodes||[]).map(id=>byId[id]).filter(o=>o&&nodeMap(o)===m).map(o=>toPx(m,o.x,o.y));if(HL.pt&&HL.pt.m===m)pts.push(toPx(m,HL.pt.x,HL.pt.y));
+    const pts=(HL.nodes||[]).map(id=>byId[id]).filter(o=>o&&nodeMap(o)===m).map(o=>toPx(m,o.x,o.y));(HL.pts||[]).forEach(q=>{if(q.m===m)pts.push(toPx(m,q.x,q.y))});if(HL.pt&&HL.pt.m===m)pts.push(toPx(m,HL.pt.x,HL.pt.y));
     if(pts.length){fitPoints(pts);userMoved=true}else fitAll()}
   draw()}
 document.getElementById('hlTag').addEventListener('click',e=>{if(e.target.closest('button'))setHL(null)});
+
+// ===== 實際出沒點（匯入 lcinfo 資料）=====
+const SPAWN_R=80;let SPAWN=(()=>{try{const d=JSON.parse(localStorage.getItem('l1spawn')||'null');return d&&d.maps?d:null}catch(e){return null}})();
+function spawnPts(m){if(!SPAWN)return [];const out=[];Object.entries(SPAWN.maps).forEach(([mk,o])=>{(o[m.k]||[]).forEach(([x,y])=>out.push({m:mk,x,y}))});return out}
+function renderSpawnBox(){const el=document.getElementById('spawnBox');if(!el)return;
+  if(SPAWN){const n=Object.values(SPAWN.maps).reduce((a,o)=>a+Object.values(o).reduce((b,v)=>b+v.length,0),0),k=new Set(Object.values(SPAWN.maps).flatMap(o=>Object.keys(o))).size;
+    el.innerHTML=`<div class="ms" style="white-space:normal">✅ 已匯入實際出沒點：<b style="color:var(--ink)">${k} 種怪、${n} 個點</b>（${esc(SPAWN.src||'')} ${esc(SPAWN.date||'')}）。點開怪物或用座標查怪，地圖會標出真實出沒位置。</div><div class="edbtns"><label class="go" for="spawnFile">重新匯入</label><button class="go warn" id="spawnDel">移除資料</button></div><input id="spawnFile" type="file" accept=".json,application/json" hidden>`}
+  else el.innerHTML=`<div class="ms" style="white-space:normal">目前地圖只能標到「地區」。匯入「天堂路線_出沒點資料.json」後，就能標出怪物實際出沒的位置（資料只存在這台裝置）。</div><div class="edbtns"><label class="go" for="spawnFile">匯入出沒點資料</label></div><input id="spawnFile" type="file" accept=".json,application/json" hidden>`;}
+document.getElementById('tabMob').addEventListener('change',e=>{if(e.target.id!=='spawnFile'||!e.target.files[0])return;const f=e.target.files[0],rd=new FileReader();
+  rd.onload=()=>{try{const d=JSON.parse(rd.result);if(!d||!d.maps)throw 0;localStorage.setItem('l1spawn',JSON.stringify(d));SPAWN=d;renderSpawnBox();showToast('已匯入出沒點資料')}catch(err){showToast('檔案格式不對，請選「天堂路線_出沒點資料.json」')}};rd.readAsText(f)});
+document.getElementById('tabMob').addEventListener('click',e=>{const b=e.target.closest('#spawnDel');if(!b)return;if(!b.dataset.arm){b.dataset.arm=1;b.textContent='再按一次確定移除';return}try{localStorage.removeItem('l1spawn')}catch(_){}SPAWN=null;renderSpawnBox();showToast('已移除出沒點資料')});
+renderSpawnBox();
 
 loadImg('main');
 try{const m=JSON.parse(localStorage.getItem('l1me')||'null');if(m&&m.x){document.getElementById('locIn').value=m.x+' '+m.y;me=m;setTimeout(()=>setMe(m,true),0)}}catch(e){}
