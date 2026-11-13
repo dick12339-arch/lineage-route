@@ -68,6 +68,11 @@ ol.steps li:first-child{border-top:0}
 .st-t{font-weight:700}
 .st-d{color:var(--mute);font-size:13.5px}
 .coord{font-variant-numeric:tabular-nums;color:var(--gold);cursor:pointer;border-bottom:1px dotted var(--gold);white-space:nowrap}
+.calm *{animation:none!important;transition:none!important}
+.pseg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.pseg .go{padding:6px 4px}.pseg .go[aria-pressed="true"]{background:var(--gold);color:#1a140a}
+.prow{display:flex;flex-wrap:wrap;gap:6px}.ph{margin:6px 0 0;font-size:13px;color:var(--gold)}.ph small{color:var(--mute);font-weight:400}
+.pstat{font-size:12px;line-height:1.7;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+.pchk{display:flex;gap:6px;align-items:center;font-size:13px}.ptips{margin:0;padding-left:20px;font-size:12.5px;line-height:1.7}
 .note{font-size:12px;color:var(--mute);border-top:1px solid var(--line);padding-top:10px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--gold);color:#1a140a;padding:7px 14px;border-radius:5px;font-size:13px;font-weight:700;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.on{opacity:1}
@@ -292,7 +297,7 @@ ul.moblist li:first-child{border-top:0}
 <style>body{margin:0}[hidden]{display:none!important}</style></head><body><div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="ver">v2.10.1 · 2026-11-12</span>
+    <span class="ver">v2.11 · 2026-11-13</span>
   </header>
 
   <div class="main">
@@ -404,14 +409,16 @@ ul.moblist li:first-child{border-top:0}
         <p class="note">物品、製作配方（含成功率）、商店與掉落資料取自「樂園 怪物查詢」。遊戲更新後若數字不同，可按「修改配方」自行修正，會存在這台裝置的瀏覽器。</p>
       </div>
       <div class="tab" id="tabTool" role="tabpanel" hidden>
-        <div class="tabs" role="tablist" style="grid-template-columns:repeat(3,1fr)">
+        <div class="tabs" role="tablist" style="grid-template-columns:repeat(4,1fr)">
           <button id="tsGoal" aria-selected="true">目標／路線</button>
           <button id="tsEnh" aria-selected="false">強化模擬</button>
           <button id="tsBoss" aria-selected="false">首領計時</button>
+          <button id="tsPow" aria-selected="false">省電</button>
         </div>
         <div id="tvGoal" class="tab"></div>
         <div id="tvEnh" class="tab" hidden></div>
         <div id="tvBoss" class="tab" hidden></div>
+        <div id="tvPow" class="tab" hidden></div>
       </div>
       <div class="tab" id="tabLog" role="tabpanel" hidden>
         <div class="lgform">
@@ -1085,10 +1092,65 @@ function renderBoss(){const el=document.getElementById('tvBoss'),now=Date.now(),
      <input class="inp" type="number" min="0" step="0.5" value="${b.hrs||''}" placeholder="重生 時" data-bhrs="${m.k}"><div style="text-align:right"><div class="cd ${left!=null&&left<=0?'due':''}">${left==null?'—':left<=0?'可能已出現':fmtT(left)}</div><button class="go" data-bkill="${m.k}" style="margin-top:4px;padding:4px 10px;font-size:12px">剛擊殺</button></div></div>`}).join('')}</div>`;}
 setInterval(()=>{if(document.getElementById('tabTool').hidden||document.getElementById('tvBoss').hidden)return;renderBoss();
   if(typeof Notification!=='undefined'&&Notification.permission==='granted'){const now=Date.now();MOB.filter(isBoss).forEach(m=>{const b=BOSS[m.k];if(b&&b.last&&b.hrs&&!b.notified&&now>=b.last+b.hrs*3600e3){b.notified=1;sv('l1boss',BOSS);try{new Notification('首領可能出現了：'+mobName(m))}catch(e){}}})}},1000);
-function renderTool(){['goal','enh','boss'].forEach(v=>{document.getElementById('tv'+v[0].toUpperCase()+v.slice(1)).hidden=toolView!==v});[['tsGoal','goal'],['tsEnh','enh'],['tsBoss','boss']].forEach(([id,v])=>document.getElementById(id).setAttribute('aria-selected',toolView===v));
-  if(toolView==='goal')renderGoal();else if(toolView==='enh')renderEnh();else renderBoss()}
+/* ===== 省電模式（降低手機發熱）===== */
+const IN_BM=document!==window.document,WD=window.document;
+let POW=Object.assign({fps:0,q:0,calm:false,auto:true},ld('l1pow',{})),powCC=null,powFound=false,powOrig=null,dprDesc=null,blackEl=null;
+const POW_FPS=[[0,'原始'],[30,'30'],[20,'20'],[15,'15']],POW_Q=[[0,'原始'],[1.5,'中'],[1,'低'],[.75,'極低']];
+async function powFind(){if(powFound)return powCC;powFound=true;
+  const ok=o=>o&&o.game&&typeof o.game.frameRate!=='undefined';
+  try{if(ok(window.cc))return powCC=window.cc}catch(e){}
+  try{if(window.System&&System.import){const m=await System.import('cc');if(ok(m))return powCC=m}}catch(e){}
+  try{for(const k of Object.keys(window)){let o;try{o=window[k]}catch(e){continue}if(o&&typeof o==='object'&&ok(o)&&o.director)return powCC=o}}catch(e){}
+  return powCC=null}
+function powCanvas(){let best=null,a=0;WD.querySelectorAll('canvas').forEach(c=>{const s=c.width*c.height;if(s>a){a=s;best=c}});return best}
+function realDPR(){try{return dprDesc&&dprDesc.get?dprDesc.get.call(window):window.devicePixelRatio}catch(e){return window.devicePixelRatio||1}}
+function powKick(){/* 讓遊戲引擎重新計算畫布大小：短暫假裝視窗寬度少 1px，再還原 */
+  try{const d=Object.getOwnPropertyDescriptor(window,'innerWidth'),w=window.innerWidth;
+    Object.defineProperty(window,'innerWidth',{get:()=>w-1,configurable:true});window.dispatchEvent(new Event('resize'));
+    setTimeout(()=>{try{if(d)Object.defineProperty(window,'innerWidth',d);else delete window.innerWidth}catch(e){}window.dispatchEvent(new Event('resize'))},80)}catch(e){window.dispatchEvent(new Event('resize'))}}
+function powSetDPR(v){try{
+  if(!dprDesc)dprDesc=Object.getOwnPropertyDescriptor(window,'devicePixelRatio')||Object.getOwnPropertyDescriptor(Object.getPrototypeOf(window),'devicePixelRatio')||{get(){return 1}};
+  if(v)Object.defineProperty(window,'devicePixelRatio',{get:()=>v,configurable:true});
+  else if(Object.getOwnPropertyDescriptor(window,'devicePixelRatio')){if(dprDesc.configurable!==false&&Object.getOwnPropertyDescriptor(window,'devicePixelRatio').get!==dprDesc.get)Object.defineProperty(window,'devicePixelRatio',Object.assign({},dprDesc,{configurable:true}))}
+  powKick();return true}catch(e){return false}}
+function powFPS(n){const cc=powCC;if(!cc)return false;try{if(powOrig==null)powOrig=cc.game.frameRate||60;cc.game.frameRate=n||powOrig;return true}catch(e){return false}}
+function powCalm(on){const w=document.getElementById('tabTool').closest('.wrap')||document.getElementById('tabTool').parentNode;w&&w.classList.toggle('calm',!!on)}
+async function powApply(){powCalm(POW.calm);if(!IN_BM)return;await powFind();powFPS(blackEl?5:POW.fps);powSetDPR(POW.q)}
+function powBlack(){if(!IN_BM){showToast('請在遊戲畫面上用書籤開啟');return}
+  if(blackEl)return;blackEl=WD.createElement('div');
+  blackEl.style.cssText='position:fixed;inset:0;z-index:2147483647;background:#000;color:#333;display:flex;align-items:flex-end;justify-content:center;padding-bottom:40px;font:14px sans-serif;user-select:none;touch-action:manipulation';
+  blackEl.textContent='黑屏掛機中・連點兩下回到遊戲';let last=0;
+  blackEl.addEventListener('click',()=>{const n=Date.now();if(n-last<450){blackEl.remove();blackEl=null;powFPS(POW.fps);renderPow()}last=n});
+  WD.documentElement.appendChild(blackEl);powFPS(5)}
+function renderPow(){const el=document.getElementById('tvPow');if(!el)return;
+  const cv=IN_BM?powCanvas():null,seg=(k,list)=>`<div class="pseg">${list.map(([v,l])=>`<button class="go" data-pk="${k}" data-pv="${v}" aria-pressed="${POW[k]===v}">${l}</button>`).join('')}</div>`;
+  el.innerHTML=`<p class="ms" style="white-space:normal">手機發熱主要來自「每秒畫幾張」和「每張畫多細」。這裡可以把遊戲降到 30 幀、降低畫面解析度，掛機時還能黑屏。設定會記住，下次點書籤自動套用。</p>
+  ${IN_BM?`<div class="pstat">遊戲引擎：<b>${powCC?'已連上，可鎖幀數':powFound?'找不到（只能調畫質）':'偵測中…'}</b><br>遊戲畫布：<b>${cv?cv.width+'×'+cv.height:'找不到'}</b>${cv?`（顯示 ${Math.round(cv.clientWidth)}×${Math.round(cv.clientHeight)}，手機原始倍率 ${(+realDPR()).toFixed(2)}）`:''}</div>`:'<div class="pstat">⚠ 這頁不是遊戲畫面。請在<b>樂園遊戲頁</b>點「天堂路線」書籤，再到這裡設定，才會作用在遊戲上。</div>'}
+  <div class="prow"><button class="go" data-pp="eco">🍃 省電建議（30 幀＋中畫質）</button><button class="go" data-pp="max">❄ 極省（20 幀＋低畫質）</button><button class="go" data-pp="off">還原原始</button></div>
+  <h4 class="ph">每秒幀數 ${powCC||!IN_BM?'':'<small>（找不到引擎，無法調整）</small>'}</h4>${seg('fps',POW_FPS)}
+  <h4 class="ph">畫質（解析度）</h4>${seg('q',POW_Q)}
+  <label class="pchk"><input type="checkbox" data-pc="calm" ${POW.calm?'checked':''}> 關閉本工具的動畫（路線流動線、位置閃爍）</label>
+  <label class="pchk"><input type="checkbox" data-pc="auto" ${POW.auto?'checked':''}> 每次點書籤自動套用</label>
+  <button class="go" data-pp="black" style="align-self:flex-start">🌑 黑屏掛機（畫面全黑、降到 5 幀，連點兩下回來）</button>
+  <h4 class="ph">手機設定（效果最大）</h4>
+  <ol class="ptips"><li><b>螢幕更新率改 60Hz</b>：Android「設定 → 顯示 → 動態畫面流暢度／螢幕更新率」選「標準」或 60Hz（120Hz 很耗電）。</li>
+  <li><b>iPhone 開「低耗電模式」</b>：Safari 會自動把網頁限制在 30 幀。</li>
+  <li><b>螢幕解析度</b>：Samsung 等手機可在「設定 → 顯示 → 螢幕解析度」改 FHD+。</li>
+  <li>調低亮度、拔掉手機殼、不要邊充電邊玩、不要放在棉被或枕頭上。</li>
+  <li>關掉其他瀏覽器分頁與背景 App；長時間掛機改用遊戲的「離線掛機」，直接關掉網頁最省。</li></ol>
+  <p class="note">畫質調低後遊戲會稍微模糊，屬正常。若畫面錯位，按「還原原始」或重新整理遊戲頁即可恢復。</p>`;
+  if(IN_BM&&!powFound)powFind().then(()=>renderPow())}
+document.getElementById('tvPow')&&document.getElementById('tvPow').addEventListener('click',e=>{const t=e.target;
+  const s=t.closest('[data-pk]');if(s){POW[s.dataset.pk]=+s.dataset.pv;sv('l1pow',POW);powApply().then(()=>setTimeout(renderPow,250));return}
+  const p=t.closest('[data-pp]');if(p){const a=p.dataset.pp;if(a==='black'){powBlack();return}
+    Object.assign(POW,a==='eco'?{fps:30,q:1.5}:a==='max'?{fps:20,q:1}:{fps:0,q:0});sv('l1pow',POW);powApply().then(()=>setTimeout(renderPow,250));showToast(a==='off'?'已還原':'已套用');return}});
+document.getElementById('tvPow')&&document.getElementById('tvPow').addEventListener('change',e=>{const c=e.target.closest('[data-pc]');if(c){POW[c.dataset.pc]=c.checked;sv('l1pow',POW);powCalm(POW.calm)}});
+if(POW.calm)powCalm(true);
+if(IN_BM&&POW.auto&&(POW.fps||POW.q))powApply();
+function renderTool(){['goal','enh','boss','pow'].forEach(v=>{document.getElementById('tv'+v[0].toUpperCase()+v.slice(1)).hidden=toolView!==v});[['tsGoal','goal'],['tsEnh','enh'],['tsBoss','boss'],['tsPow','pow']].forEach(([id,v])=>document.getElementById(id).setAttribute('aria-selected',toolView===v));
+  if(toolView==='goal')renderGoal();else if(toolView==='enh')renderEnh();else if(toolView==='pow')renderPow();else renderBoss()}
 document.getElementById('tbTool').addEventListener('click',()=>showTab('tool'));
-[['tsGoal','goal'],['tsEnh','enh'],['tsBoss','boss']].forEach(([id,v])=>document.getElementById(id).addEventListener('click',()=>{toolView=v;renderTool()}));
+[['tsGoal','goal'],['tsEnh','enh'],['tsBoss','boss'],['tsPow','pow']].forEach(([id,v])=>document.getElementById(id).addEventListener('click',()=>{toolView=v;renderTool()}));
 const TT=document.getElementById('tabTool');
 TT.addEventListener('click',e=>{const t=e.target;
   const it=t.closest('[data-it]');if(it){itQty=1;openItem(it.dataset.it);return}
