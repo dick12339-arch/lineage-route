@@ -304,7 +304,7 @@ ul.moblist li:first-child{border-top:0}
 <div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="ver">v2.15 · 2026-11-14</span>
+    <span class="ver">v2.16 · 2026-11-14</span>
   </header>
 
   <div class="main">
@@ -1122,7 +1122,7 @@ setInterval(()=>{if(document.getElementById('tabTool').hidden||document.getEleme
 const EV_D=['日','一','二','三','四','五','六'];
 function evSeed(force){let n=0;EV_BUILTIN.forEach(b=>{if(force||!(EVT.seed||[]).includes(b.id)){if(!EVT.list.some(x=>x.id===b.id)){EVT.list.push(JSON.parse(JSON.stringify(b)));n++}EVT.seed=[...new Set([...(EVT.seed||[]),b.id])]}});if(n||force)sv('l1evt',EVT);return n}
 /* 樂園內建世界活動（每天）。改時間只要改這裡，使用者已存的同 id 活動不會被覆蓋 */
-const EV_BUILTIN=[{id:'w_bug',n:'蟲族降臨',times:['19:00'],days:[],dur:0,lead:5,node:'',note:'',on:true},{id:'w_boss',n:'世界王',times:['20:00'],days:[],dur:0,lead:5,node:'',note:'',on:true}];
+const EV_BUILTIN=[{id:'w_bug',n:'蟲族降臨',times:['19:00'],days:[],dur:0,lead:5,node:'',note:'',on:true},{id:'w_boss',n:'世界王',times:['20:00'],days:[],dur:0,lead:5,node:'',note:'',on:true},{id:'w_inf',n:'無限大賽',times:['21:00'],days:[],dur:0,lead:5,node:'',note:'',on:true}];
 let EVT=Object.assign({list:[],sound:true,vib:true,seed:[]},ld('l1evt',{})),evEdit=null,evDays={},evFired=ld('l1evtfired',{}),evAC=null;
 evSeed();
 const evHM=t=>{const m=String(t).match(/^(\d{1,2})[:：](\d{2})$/);if(!m)return null;const h=+m[1],mi=+m[2];return h<24&&mi<60?h*60+mi:null};
@@ -1172,7 +1172,7 @@ function evRenderList(){const box=document.getElementById('evList');if(!box)retu
 function renderEvt(){const el=document.getElementById('tvEvt'),e=evEdit?EVT.list.find(x=>x.id===evEdit):null;
   evDays={};((e&&e.days)||[]).forEach(d=>evDays[d]=1);
   const towns=N.filter(o=>o.t==='town'||o.t==='spot'||o.t==='dungeon');
-  el.innerHTML=`<p class="ms" style="white-space:normal">已內建每天 19:00 蟲族降臨、20:00 世界王（提前 5 分鐘提醒），也可以自己新增其他活動。時間到會在遊戲畫面上方跳出提醒，並響鈴、震動（工具視窗收起來也會跳）。<b>遊戲頁要開著才會提醒</b>；時間以手機時間為準。</p>
+  el.innerHTML=`<p class="ms" style="white-space:normal">已內建每天 19:00 蟲族降臨、20:00 世界王、21:00 無限大賽（提前 5 分鐘提醒），也可以自己新增其他活動。時間到會在遊戲畫面上方跳出提醒，並響鈴、震動（工具視窗收起來也會跳）。<b>遊戲頁要開著才會提醒</b>；時間以手機時間為準。</p>
    <div class="rc"><div class="evform">
     <label class="full">活動名稱<input class="inp" id="evN" value="${esc(e?e.n:'')}" placeholder="例：世界首領、攻城戰、經驗加倍" maxlength="30"></label>
     <div class="full"><span class="ms">哪幾天（都不選＝每天）</span><div class="evdays">${EV_D.map((d,i)=>`<button class="fchip" data-evday="${i}" aria-pressed="${!!evDays[i]}">${d}</button>`).join('')}</div></div>
