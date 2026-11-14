@@ -303,7 +303,7 @@ ul.moblist li:first-child{border-top:0}
 <style>body{margin:0}[hidden]{display:none!important}</style></head><body><div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="ver">v2.14 · 2026-11-14</span>
+    <span class="ver">v2.15 · 2026-11-14</span>
   </header>
 
   <div class="main">
@@ -1119,7 +1119,11 @@ setInterval(()=>{if(document.getElementById('tabTool').hidden||document.getEleme
   if(typeof Notification!=='undefined'&&Notification.permission==='granted'){const now=Date.now();MOB.filter(isBoss).forEach(m=>{const b=BOSS[m.k];if(b&&b.last&&b.hrs&&!b.notified&&now>=b.last+b.hrs*3600e3){b.notified=1;sv('l1boss',BOSS);try{new Notification('首領可能出現了：'+mobName(m))}catch(e){}}})}},1000);
 /* ===== 世界活動提醒 ===== */
 const EV_D=['日','一','二','三','四','五','六'];
-let EVT=Object.assign({list:[],sound:true,vib:true},ld('l1evt',{})),evEdit=null,evDays={},evFired=ld('l1evtfired',{}),evAC=null;
+function evSeed(force){let n=0;EV_BUILTIN.forEach(b=>{if(force||!(EVT.seed||[]).includes(b.id)){if(!EVT.list.some(x=>x.id===b.id)){EVT.list.push(JSON.parse(JSON.stringify(b)));n++}EVT.seed=[...new Set([...(EVT.seed||[]),b.id])]}});if(n||force)sv('l1evt',EVT);return n}
+/* 樂園內建世界活動（每天）。改時間只要改這裡，使用者已存的同 id 活動不會被覆蓋 */
+const EV_BUILTIN=[{id:'w_bug',n:'蟲族降臨',times:['19:00'],days:[],dur:0,lead:5,node:'',note:'',on:true},{id:'w_boss',n:'世界王',times:['20:00'],days:[],dur:0,lead:5,node:'',note:'',on:true}];
+let EVT=Object.assign({list:[],sound:true,vib:true,seed:[]},ld('l1evt',{})),evEdit=null,evDays={},evFired=ld('l1evtfired',{}),evAC=null;
+evSeed();
 const evHM=t=>{const m=String(t).match(/^(\d{1,2})[:：](\d{2})$/);if(!m)return null;const h=+m[1],mi=+m[2];return h<24&&mi<60?h*60+mi:null};
 const evPad=n=>String(n).padStart(2,'0'),evFmtHM=m=>evPad(Math.floor(m/60))+':'+evPad(m%60);
 function evTimes(e){return (e.times||[]).map(evHM).filter(x=>x!=null).sort((a,b)=>a-b)}
@@ -1167,7 +1171,7 @@ function evRenderList(){const box=document.getElementById('evList');if(!box)retu
 function renderEvt(){const el=document.getElementById('tvEvt'),e=evEdit?EVT.list.find(x=>x.id===evEdit):null;
   evDays={};((e&&e.days)||[]).forEach(d=>evDays[d]=1);
   const towns=N.filter(o=>o.t==='town'||o.t==='spot'||o.t==='dungeon');
-  el.innerHTML=`<p class="ms" style="white-space:normal">把遊戲裡的世界活動時間填進來，時間到會在遊戲畫面上方跳出提醒，並響鈴、震動（工具視窗收起來也會跳）。<b>遊戲頁要開著才會提醒</b>；時間以手機時間為準。</p>
+  el.innerHTML=`<p class="ms" style="white-space:normal">已內建每天 19:00 蟲族降臨、20:00 世界王（提前 5 分鐘提醒），也可以自己新增其他活動。時間到會在遊戲畫面上方跳出提醒，並響鈴、震動（工具視窗收起來也會跳）。<b>遊戲頁要開著才會提醒</b>；時間以手機時間為準。</p>
    <div class="rc"><div class="evform">
     <label class="full">活動名稱<input class="inp" id="evN" value="${esc(e?e.n:'')}" placeholder="例：世界首領、攻城戰、經驗加倍" maxlength="30"></label>
     <div class="full"><span class="ms">哪幾天（都不選＝每天）</span><div class="evdays">${EV_D.map((d,i)=>`<button class="fchip" data-evday="${i}" aria-pressed="${!!evDays[i]}">${d}</button>`).join('')}</div></div>
@@ -1183,7 +1187,7 @@ function renderEvt(){const el=document.getElementById('tvEvt'),e=evEdit?EVT.list
    <div class="rc"><h4 class="ph" style="margin:0 0 6px">提醒方式</h4>
     <label class="pchk"><input type="checkbox" data-evo="sound" ${EVT.sound?'checked':''}> 響鈴（iPhone 請關閉靜音、調大音量）</label>
     <label class="pchk"><input type="checkbox" data-evo="vib" ${EVT.vib?'checked':''}> 震動（Android 支援；iPhone 不支援網頁震動）</label>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="go" id="evTest">🔔 測試提醒</button>${typeof Notification!=='undefined'&&Notification.permission!=='granted'?'<button class="go" id="evNotif">開啟系統通知</button>':''}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="go" id="evTest">🔔 測試提醒</button><button class="go" id="evSeedBtn">恢復內建活動</button>${typeof Notification!=='undefined'&&Notification.permission!=='granted'?'<button class="go" id="evNotif">開啟系統通知</button>':''}</div>
     <p class="ms" style="white-space:normal">第一次使用請按「測試提醒」，讓瀏覽器允許播放聲音。</p></div>
    <div class="rc"><h4 class="ph" style="margin:0 0 6px">分享／備份活動表</h4><textarea class="inp" id="evIO" rows="3" placeholder="按「匯出」複製後傳給盟友；收到的文字貼在這裡按「匯入」"></textarea>
     <div style="display:flex;gap:6px;margin-top:6px"><button class="go" id="evExp">匯出</button><button class="go" id="evImp">匯入（加入現有）</button></div></div>`;
@@ -1202,6 +1206,7 @@ document.getElementById('tvEvt').addEventListener('click',e=>{const t=e.target,$
   const on=t.closest('[data-evon]');if(on){const x=EVT.list.find(y=>y.id===on.dataset.evon);x.on=!x.on;evSave();evRenderList();return}
   const ed=t.closest('[data-eved]');if(ed){evEdit=ed.dataset.eved;renderEvt();$('evN').scrollIntoView&&$('evN').scrollIntoView({block:'center'});return}
   const nv=t.closest('[data-evnav]');if(nv){const x=EVT.list.find(y=>y.id===nv.dataset.evnav);if(x&&byId[x.node]){toSel.value=x.node;showTab('route');render();showMap()}return}
+  if(t.closest('#evSeedBtn')){const n=evSeed(true);renderEvt();showToast(n?`已加回 ${n} 個內建活動`:'內建活動都還在');return}
   if(t.closest('#evTest')){evUnlock();evAlert({n:'測試提醒',lead:5,dur:30,note:'聽得到聲音就設定完成',node:''},'start',Date.now());return}
   if(t.closest('#evNotif')){try{Notification.requestPermission().then(()=>renderEvt())}catch(x){showToast('這個瀏覽器不支援系統通知')}return}
   if(t.closest('#evExp')){const io=$('evIO');io.value=JSON.stringify({l1evt:1,list:EVT.list.map(({id,on,...r})=>r)});io.select();try{navigator.clipboard.writeText(io.value).then(()=>showToast('活動表已複製'),()=>showToast('請長按複製'))}catch(x){showToast('請長按複製')}return}
