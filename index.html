@@ -284,6 +284,11 @@ ul.moblist li:first-child{border-top:0}
 .bossrow .inp{padding:5px 6px;font-size:13px}
 .bossrow .lnk{font:inherit;font-weight:700;background:none;border:0;padding:0;color:var(--ink);cursor:pointer;text-align:left}
 .bossrow .lnk:hover{color:var(--gold)}
+.evrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 0;border-top:1px dashed var(--line);font-size:13px}
+.evrow.off{opacity:.45}.evrow .cd{font-variant-numeric:tabular-nums;font-weight:700;text-align:right}.evrow .cd.live{color:var(--walk,#7bd88f)}.evrow .cd.soon{color:var(--to)}
+.evbtns{display:flex;gap:4px;justify-content:flex-end;margin-top:4px;flex-wrap:wrap}.evbtns .go{padding:3px 8px;font-size:12px}
+.evdays{display:flex;gap:4px;flex-wrap:wrap}.evdays .fchip{padding:4px 9px}
+.evform{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}.evform .full{grid-column:1/-1}.evform label{font-size:12px;color:var(--mute);display:flex;flex-direction:column;gap:3px}
 
 /* v2.8 地圖標示 */
 .mapover .hlr{fill:none;stroke:var(--to);stroke-width:3}
@@ -298,7 +303,7 @@ ul.moblist li:first-child{border-top:0}
 <style>body{margin:0}[hidden]{display:none!important}</style></head><body><div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="ver">v2.13 · 2026-11-14</span>
+    <span class="ver">v2.14 · 2026-11-14</span>
   </header>
 
   <div class="main">
@@ -427,15 +432,17 @@ ul.moblist li:first-child{border-top:0}
         <p class="note">NPC 位置取自 L1J-TW（台版天堂 3.80C 開源資料庫）。樂園若有改版、新增或移動 NPC，位置可能略有不同，請以遊戲內為準。點座標可複製；「📍 地圖」會在地圖上標出位置，「導航」會把最近的地點設為目的地。「離我最近」需要先在地圖上方輸入 /loc 標示位置。</p>
       </div>
       <div class="tab" id="tabTool" role="tabpanel" hidden>
-        <div class="tabs" role="tablist" style="grid-template-columns:repeat(4,1fr)">
+        <div class="tabs" role="tablist" style="grid-template-columns:repeat(auto-fit,minmax(62px,1fr))">
           <button id="tsGoal" aria-selected="true">目標／路線</button>
           <button id="tsEnh" aria-selected="false">強化模擬</button>
           <button id="tsBoss" aria-selected="false">首領計時</button>
+          <button id="tsEvt" aria-selected="false">活動提醒</button>
           <button id="tsPow" aria-selected="false">畫質／省電</button>
         </div>
         <div id="tvGoal" class="tab"></div>
         <div id="tvEnh" class="tab" hidden></div>
         <div id="tvBoss" class="tab" hidden></div>
+        <div id="tvEvt" class="tab" hidden></div>
         <div id="tvPow" class="tab" hidden></div>
       </div>
       <div class="tab" id="tabLog" role="tabpanel" hidden>
@@ -1110,6 +1117,98 @@ function renderBoss(){const el=document.getElementById('tvBoss'),now=Date.now(),
      <input class="inp" type="number" min="0" step="0.5" value="${b.hrs||''}" placeholder="重生 時" data-bhrs="${m.k}"><div style="text-align:right"><div class="cd ${left!=null&&left<=0?'due':''}">${left==null?'—':left<=0?'可能已出現':fmtT(left)}</div><button class="go" data-bkill="${m.k}" style="margin-top:4px;padding:4px 10px;font-size:12px">剛擊殺</button></div></div>`}).join('')}</div>`;}
 setInterval(()=>{if(document.getElementById('tabTool').hidden||document.getElementById('tvBoss').hidden)return;renderBoss();
   if(typeof Notification!=='undefined'&&Notification.permission==='granted'){const now=Date.now();MOB.filter(isBoss).forEach(m=>{const b=BOSS[m.k];if(b&&b.last&&b.hrs&&!b.notified&&now>=b.last+b.hrs*3600e3){b.notified=1;sv('l1boss',BOSS);try{new Notification('首領可能出現了：'+mobName(m))}catch(e){}}})}},1000);
+/* ===== 世界活動提醒 ===== */
+const EV_D=['日','一','二','三','四','五','六'];
+let EVT=Object.assign({list:[],sound:true,vib:true},ld('l1evt',{})),evEdit=null,evDays={},evFired=ld('l1evtfired',{}),evAC=null;
+const evHM=t=>{const m=String(t).match(/^(\d{1,2})[:：](\d{2})$/);if(!m)return null;const h=+m[1],mi=+m[2];return h<24&&mi<60?h*60+mi:null};
+const evPad=n=>String(n).padStart(2,'0'),evFmtHM=m=>evPad(Math.floor(m/60))+':'+evPad(m%60);
+function evTimes(e){return (e.times||[]).map(evHM).filter(x=>x!=null).sort((a,b)=>a-b)}
+/* 找出某活動「目前進行中」或「下一場」的開始時間 */
+function evNext(e,now){now=now||Date.now();const ts=evTimes(e);if(!ts.length)return null;const dur=(+e.dur||0)*60e3;
+  const base=new Date(now);base.setHours(0,0,0,0);
+  for(let d=-1;d<=8;d++){const day=new Date(base.getTime());day.setDate(day.getDate()+d);if(e.days&&e.days.length&&!e.days.includes(day.getDay()))continue;
+    for(const m of ts){const st=new Date(day.getTime());st.setHours(Math.floor(m/60),m%60,0,0);const t=st.getTime();if(t+Math.max(dur,1)>now)return {start:t,end:t+dur,live:t<=now&&now<t+dur}}}
+  return null}
+function evFmt(ms){ms=Math.max(0,ms);const d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5),mi=Math.floor(ms%36e5/6e4),se=Math.floor(ms%6e4/1e3);
+  return d?`${d} 天 ${h} 時`:h?`${h}:${evPad(mi)}:${evPad(se)}`:`${mi}:${evPad(se)}`}
+function evWhen(e){const ts=evTimes(e).map(evFmtHM);return (e.days&&e.days.length&&e.days.length<7?'每週'+e.days.slice().sort().map(d=>EV_D[d]).join('、'):'每天')+' '+(ts.length>6?ts.slice(0,6).join('、')+` 等 ${ts.length} 場`:ts.join('、'))}
+function evSave(){sv('l1evt',EVT)}
+/* 音效、震動、橫幅、系統通知 */
+function evUnlock(){try{if(!evAC){const A=window.AudioContext||window.webkitAudioContext;if(A)evAC=new A()}if(evAC&&evAC.state==='suspended')evAC.resume()}catch(e){}}
+document.addEventListener('pointerdown',evUnlock,{passive:true});
+function evBeep(n){if(!EVT.sound)return;evUnlock();if(!evAC)return;try{for(let i=0;i<(n||3);i++){const o=evAC.createOscillator(),g=evAC.createGain(),t=evAC.currentTime+i*.28;o.type='square';o.frequency.value=i%2?988:1319;
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.18,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+.22);o.connect(g);g.connect(evAC.destination);o.start(t);o.stop(t+.24)}}catch(e){}}
+function evBanner(title,sub,node){const root=document.getElementById('toast').getRootNode(),host=root.body||root;let b=root.querySelector?root.querySelector('#evBanner'):null;
+  if(!b){b=WD.createElement('div');b.id='evBanner';host.appendChild(b)}
+  b.setAttribute('style','position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:2147483647;width:min(92vw,420px);box-sizing:border-box;background:#1a140a;color:#f3e7c9;border:2px solid #d9a441;border-radius:10px;padding:10px 12px;font:14px/1.45 system-ui,-apple-system,"PingFang TC","Noto Sans TC",sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.6);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;align-items:center');
+  b.innerHTML=`<div><b style="color:#d9a441;font-size:15px">⏰ ${esc(title)}</b><div style="font-size:13px;opacity:.9">${esc(sub)}</div></div><div style="display:flex;gap:6px">${node?`<button data-evgo="${esc(node)}" style="font:inherit;font-size:13px;font-weight:700;padding:6px 10px;border-radius:6px;border:1px solid #d9a441;background:#d9a441;color:#1a140a">導航</button>`:''}<button data-evx="1" aria-label="關閉" style="font:inherit;font-size:13px;padding:6px 10px;border-radius:6px;border:1px solid #d9a441;background:none;color:#d9a441">知道了</button></div>`;
+  b.hidden=false;clearTimeout(b._t);b._t=setTimeout(()=>{b.hidden=true},60000);
+  b.onclick=ev=>{const g=ev.target.closest('[data-evgo]');if(g&&byId[g.dataset.evgo]){toSel.value=g.dataset.evgo;showTab('route');render();showMap()}
+    if(ev.target.closest('[data-evx],[data-evgo]'))b.hidden=true}}
+function evAlert(e,kind,st){const sub=kind==='pre'?`${e.lead} 分鐘後開始（${evFmtHM(new Date(st).getHours()*60+new Date(st).getMinutes())}）`:'活動開始了！'+(e.dur?`（持續 ${e.dur} 分鐘）`:'');
+  evBanner(e.n,sub+(e.note?'・'+e.note:''),e.node);evBeep(kind==='pre'?2:4);
+  if(EVT.vib&&navigator.vibrate)try{navigator.vibrate(kind==='pre'?[200,100,200]:[300,120,300,120,500])}catch(x){}
+  if(typeof Notification!=='undefined'&&Notification.permission==='granted')try{new Notification('⏰ '+e.n,{body:sub,tag:'l1evt'+e.id})}catch(x){}}
+function evTick(){const now=Date.now();let ch=false;
+  EVT.list.forEach(e=>{if(!e.on)return;const nx=evNext(e,now);if(!nx)return;
+    [['pre',nx.start-(+e.lead||0)*60e3],['start',nx.start]].forEach(([k,t])=>{if(k==='pre'&&!(+e.lead))return;const key=e.id+'@'+nx.start+'@'+k;
+      if(now>=t&&now-t<5*60e3&&!evFired[key]){evFired[key]=now;ch=true;evAlert(e,k,nx.start)}})});
+  if(ch){Object.keys(evFired).forEach(k=>{if(now-evFired[k]>2*864e5)delete evFired[k]});sv('l1evtfired',evFired)}
+  if(!document.getElementById('tabTool').hidden&&!document.getElementById('tvEvt').hidden)evRenderList()}
+setInterval(evTick,1000);
+function evRenderList(){const box=document.getElementById('evList');if(!box)return;const now=Date.now();
+  const rows=EVT.list.map(e=>({e,nx:evNext(e,now)})).sort((a,b)=>(b.e.on-a.e.on)||((a.nx?(a.nx.live?0:a.nx.start):9e15)-(b.nx?(b.nx.live?0:b.nx.start):9e15)));
+  box.innerHTML=rows.length?rows.map(({e,nx})=>{let cd='—',cls='';if(nx){if(nx.live){cd='進行中・剩 '+evFmt(nx.end-now);cls='live'}else{const l=nx.start-now;cd=evFmt(l);cls=l<=(Math.max(+e.lead||0,5))*60e3?'soon':''}}
+    const nxt=nx&&!nx.live?new Date(nx.start):null;
+    return `<div class="evrow ${e.on?'':'off'}"><div style="min-width:0"><b>${esc(e.n)}</b>${e.node&&byId[e.node]?` <small class="ms" style="display:inline">📍${esc(byId[e.node].n.replace(/（.*）/,''))}</small>`:''}<span class="ms" style="display:block;white-space:normal">${esc(evWhen(e))}${e.dur?`・${e.dur} 分鐘`:''}${+e.lead?`・提前 ${e.lead} 分提醒`:''}${e.note?'・'+esc(e.note):''}</span></div>
+      <div><div class="cd ${cls}">${e.on?cd:'已關閉'}</div>${nxt&&e.on?`<div class="ms" style="text-align:right">${nxt.getMonth()+1}/${nxt.getDate()}（${EV_D[nxt.getDay()]}）${evFmtHM(nxt.getHours()*60+nxt.getMinutes())}</div>`:''}
+      <div class="evbtns"><button class="go" data-evon="${e.id}">${e.on?'關':'開'}</button><button class="go" data-eved="${e.id}">編輯</button>${e.node?`<button class="go" data-evnav="${e.id}">導航</button>`:''}</div></div></div>`}).join('')
+   :'<p class="ms" style="white-space:normal;padding:8px 0">還沒有活動。在上面填入活動名稱和開始時間，按「儲存活動」。</p>'}
+function renderEvt(){const el=document.getElementById('tvEvt'),e=evEdit?EVT.list.find(x=>x.id===evEdit):null;
+  evDays={};((e&&e.days)||[]).forEach(d=>evDays[d]=1);
+  const towns=N.filter(o=>o.t==='town'||o.t==='spot'||o.t==='dungeon');
+  el.innerHTML=`<p class="ms" style="white-space:normal">把遊戲裡的世界活動時間填進來，時間到會在遊戲畫面上方跳出提醒，並響鈴、震動（工具視窗收起來也會跳）。<b>遊戲頁要開著才會提醒</b>；時間以手機時間為準。</p>
+   <div class="rc"><div class="evform">
+    <label class="full">活動名稱<input class="inp" id="evN" value="${esc(e?e.n:'')}" placeholder="例：世界首領、攻城戰、經驗加倍" maxlength="30"></label>
+    <div class="full"><span class="ms">哪幾天（都不選＝每天）</span><div class="evdays">${EV_D.map((d,i)=>`<button class="fchip" data-evday="${i}" aria-pressed="${!!evDays[i]}">${d}</button>`).join('')}</div></div>
+    <label class="full">開始時間（可填多個，用空格或逗號分開）<input class="inp" id="evT" value="${esc(e?(e.times||[]).join(' '):'')}" placeholder="例：12:00 20:00 22:30" inputmode="numeric"></label>
+    <div class="full" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span class="ms">快速產生：從</span><input class="inp" id="evGs" style="width:74px" placeholder="00:00" value="00:00"><span class="ms">起每</span><input class="inp" id="evGh" type="number" min="0.5" step="0.5" style="width:62px" placeholder="2"><span class="ms">小時一場</span><button class="go" id="evGen" style="padding:4px 10px;font-size:12px">產生</button></div>
+    <label>持續（分鐘）<input class="inp" id="evDur" type="number" min="0" value="${e?e.dur||'':''}" placeholder="例：30"></label>
+    <label>提前提醒（分鐘）<input class="inp" id="evLead" type="number" min="0" value="${e?e.lead:5}" placeholder="0＝不提前"></label>
+    <label class="full">活動地點（可選，提醒可一鍵導航）<select class="inp" id="evNode"><option value="">不指定</option>${towns.map(o=>`<option value="${o.id}" ${e&&e.node===o.id?'selected':''}>${esc(o.n)}</option>`).join('')}</select></label>
+    <label class="full">備註（可選）<input class="inp" id="evNote" value="${esc(e&&e.note||'')}" placeholder="例：帶藥水、找血盟集合" maxlength="40"></label>
+    <div class="full" style="display:flex;gap:6px;flex-wrap:wrap"><button class="go" id="evSave">${e?'儲存修改':'儲存活動'}</button>${e?'<button class="go" id="evCancel">取消</button><button class="go" id="evDel" style="border-color:var(--to);color:var(--to)">刪除</button>':''}</div>
+   </div></div>
+   <div class="rc"><h4 class="ph" style="margin:0 0 4px">我的活動（${EVT.list.length}）</h4><div id="evList"></div></div>
+   <div class="rc"><h4 class="ph" style="margin:0 0 6px">提醒方式</h4>
+    <label class="pchk"><input type="checkbox" data-evo="sound" ${EVT.sound?'checked':''}> 響鈴（iPhone 請關閉靜音、調大音量）</label>
+    <label class="pchk"><input type="checkbox" data-evo="vib" ${EVT.vib?'checked':''}> 震動（Android 支援；iPhone 不支援網頁震動）</label>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="go" id="evTest">🔔 測試提醒</button>${typeof Notification!=='undefined'&&Notification.permission!=='granted'?'<button class="go" id="evNotif">開啟系統通知</button>':''}</div>
+    <p class="ms" style="white-space:normal">第一次使用請按「測試提醒」，讓瀏覽器允許播放聲音。</p></div>
+   <div class="rc"><h4 class="ph" style="margin:0 0 6px">分享／備份活動表</h4><textarea class="inp" id="evIO" rows="3" placeholder="按「匯出」複製後傳給盟友；收到的文字貼在這裡按「匯入」"></textarea>
+    <div style="display:flex;gap:6px;margin-top:6px"><button class="go" id="evExp">匯出</button><button class="go" id="evImp">匯入（加入現有）</button></div></div>`;
+  evRenderList()}
+document.getElementById('tvEvt').addEventListener('click',e=>{const t=e.target,$=id=>document.getElementById(id);
+  const dy=t.closest('[data-evday]');if(dy){const i=+dy.dataset.evday;evDays[i]=!evDays[i];dy.setAttribute('aria-pressed',!!evDays[i]);return}
+  if(t.closest('#evGen')){const s0=evHM($('evGs').value||'00:00'),h=parseFloat($('evGh').value);if(s0==null||!(h>=0.5)){showToast('請填起始時間（例 00:00）和間隔小時');return}
+    const out=[];for(let m=s0;m<s0+1440;m+=Math.round(h*60))out.push(evFmtHM(m%1440));$('evT').value=[...new Set(out)].sort().join(' ');return}
+  if(t.closest('#evSave')){const n=$('evN').value.trim(),times=[...new Set($('evT').value.split(/[\s,，、]+/).filter(Boolean).map(x=>{const m=evHM(x.replace('：',':'));return m==null?null:evFmtHM(m)}))];
+    if(!n){showToast('請填活動名稱');return}if(times.includes(null)||!times.length){showToast('時間格式請用 20:00 這種寫法');return}
+    const days=Object.keys(evDays).filter(k=>evDays[k]).map(Number),o={n,times:times.sort(),days:days.length===7?[]:days,dur:+$('evDur').value||0,lead:Math.max(0,+$('evLead').value||0),node:$('evNode').value,note:$('evNote').value.trim()};
+    if(evEdit){Object.assign(EVT.list.find(x=>x.id===evEdit),o)}else EVT.list.push(Object.assign({id:Date.now().toString(36),on:true},o));
+    evSave();showToast(evEdit?'已更新活動':'已新增活動：'+n);evEdit=null;renderEvt();return}
+  if(t.closest('#evCancel')){evEdit=null;renderEvt();return}
+  if(t.closest('#evDel')){EVT.list=EVT.list.filter(x=>x.id!==evEdit);evEdit=null;evSave();renderEvt();showToast('已刪除');return}
+  const on=t.closest('[data-evon]');if(on){const x=EVT.list.find(y=>y.id===on.dataset.evon);x.on=!x.on;evSave();evRenderList();return}
+  const ed=t.closest('[data-eved]');if(ed){evEdit=ed.dataset.eved;renderEvt();$('evN').scrollIntoView&&$('evN').scrollIntoView({block:'center'});return}
+  const nv=t.closest('[data-evnav]');if(nv){const x=EVT.list.find(y=>y.id===nv.dataset.evnav);if(x&&byId[x.node]){toSel.value=x.node;showTab('route');render();showMap()}return}
+  if(t.closest('#evTest')){evUnlock();evAlert({n:'測試提醒',lead:5,dur:30,note:'聽得到聲音就設定完成',node:''},'start',Date.now());return}
+  if(t.closest('#evNotif')){try{Notification.requestPermission().then(()=>renderEvt())}catch(x){showToast('這個瀏覽器不支援系統通知')}return}
+  if(t.closest('#evExp')){const io=$('evIO');io.value=JSON.stringify({l1evt:1,list:EVT.list.map(({id,on,...r})=>r)});io.select();try{navigator.clipboard.writeText(io.value).then(()=>showToast('活動表已複製'),()=>showToast('請長按複製'))}catch(x){showToast('請長按複製')}return}
+  if(t.closest('#evImp')){try{const d=JSON.parse($('evIO').value.trim());const arr=(d.list||[]).filter(x=>x&&x.n&&Array.isArray(x.times));if(!arr.length)throw 0;
+    arr.forEach((x,i)=>EVT.list.push({id:(Date.now()+i).toString(36),on:true,n:String(x.n).slice(0,30),times:x.times.filter(s=>evHM(s)!=null),days:(x.days||[]).filter(d=>d>=0&&d<7),dur:+x.dur||0,lead:+x.lead||0,node:byId[x.node]?x.node:'',note:String(x.note||'').slice(0,40)}));
+    evSave();renderEvt();showToast(`已匯入 ${arr.length} 個活動`)}catch(x){showToast('匯入失敗：請貼上「匯出」的完整文字')}return}});
+document.getElementById('tvEvt').addEventListener('change',e=>{const c=e.target.closest('[data-evo]');if(c){EVT[c.dataset.evo]=c.checked;evSave()}});
 /* ===== 畫質／省電模式（提高畫質渲染、降低手機發熱）===== */
 const IN_BM=document!==window.document,WD=window.document;
 let POW=Object.assign({fps:0,q:0,hq:0,vivid:false,smooth:false,calm:false,auto:true},ld('l1pow',{})),powCC=null,powFound=false,powOrig=null,dprDesc=null,blackEl=null;
@@ -1183,10 +1282,10 @@ document.getElementById('tvPow')&&document.getElementById('tvPow').addEventListe
 document.getElementById('tvPow')&&document.getElementById('tvPow').addEventListener('change',e=>{const c=e.target.closest('[data-pc]');if(c){POW[c.dataset.pc]=c.checked;sv('l1pow',POW);if(c.dataset.pc==='vivid'||c.dataset.pc==='smooth'){powApply().then(()=>setTimeout(renderPow,250))}else powCalm(POW.calm)}});
 if(POW.calm)powCalm(true);
 if(IN_BM&&POW.auto&&(POW.fps||POW.q||POW.hq||POW.vivid||POW.smooth))powApply();
-function renderTool(){['goal','enh','boss','pow'].forEach(v=>{document.getElementById('tv'+v[0].toUpperCase()+v.slice(1)).hidden=toolView!==v});[['tsGoal','goal'],['tsEnh','enh'],['tsBoss','boss'],['tsPow','pow']].forEach(([id,v])=>document.getElementById(id).setAttribute('aria-selected',toolView===v));
-  if(toolView==='goal')renderGoal();else if(toolView==='enh')renderEnh();else if(toolView==='pow')renderPow();else renderBoss()}
+function renderTool(){['goal','enh','boss','evt','pow'].forEach(v=>{document.getElementById('tv'+v[0].toUpperCase()+v.slice(1)).hidden=toolView!==v});[['tsGoal','goal'],['tsEnh','enh'],['tsBoss','boss'],['tsEvt','evt'],['tsPow','pow']].forEach(([id,v])=>document.getElementById(id).setAttribute('aria-selected',toolView===v));
+  if(toolView==='goal')renderGoal();else if(toolView==='enh')renderEnh();else if(toolView==='pow')renderPow();else if(toolView==='evt')renderEvt();else renderBoss()}
 document.getElementById('tbTool').addEventListener('click',()=>showTab('tool'));
-[['tsGoal','goal'],['tsEnh','enh'],['tsBoss','boss'],['tsPow','pow']].forEach(([id,v])=>document.getElementById(id).addEventListener('click',()=>{toolView=v;renderTool()}));
+[['tsGoal','goal'],['tsEnh','enh'],['tsBoss','boss'],['tsEvt','evt'],['tsPow','pow']].forEach(([id,v])=>document.getElementById(id).addEventListener('click',()=>{toolView=v;renderTool()}));
 const TT=document.getElementById('tabTool');
 TT.addEventListener('click',e=>{const t=e.target;
   const it=t.closest('[data-it]');if(it){itQty=1;openItem(it.dataset.it);return}
