@@ -298,7 +298,7 @@ ul.moblist li:first-child{border-top:0}
 <div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="ver">v2.11 · 2026-11-13</span>
+    <span class="ver">v2.12 · 2026-11-14</span>
   </header>
 
   <div class="main">
@@ -414,7 +414,7 @@ ul.moblist li:first-child{border-top:0}
           <button id="tsGoal" aria-selected="true">目標／路線</button>
           <button id="tsEnh" aria-selected="false">強化模擬</button>
           <button id="tsBoss" aria-selected="false">首領計時</button>
-          <button id="tsPow" aria-selected="false">省電</button>
+          <button id="tsPow" aria-selected="false">畫質／省電</button>
         </div>
         <div id="tvGoal" class="tab"></div>
         <div id="tvEnh" class="tab" hidden></div>
@@ -1093,10 +1093,11 @@ function renderBoss(){const el=document.getElementById('tvBoss'),now=Date.now(),
      <input class="inp" type="number" min="0" step="0.5" value="${b.hrs||''}" placeholder="重生 時" data-bhrs="${m.k}"><div style="text-align:right"><div class="cd ${left!=null&&left<=0?'due':''}">${left==null?'—':left<=0?'可能已出現':fmtT(left)}</div><button class="go" data-bkill="${m.k}" style="margin-top:4px;padding:4px 10px;font-size:12px">剛擊殺</button></div></div>`}).join('')}</div>`;}
 setInterval(()=>{if(document.getElementById('tabTool').hidden||document.getElementById('tvBoss').hidden)return;renderBoss();
   if(typeof Notification!=='undefined'&&Notification.permission==='granted'){const now=Date.now();MOB.filter(isBoss).forEach(m=>{const b=BOSS[m.k];if(b&&b.last&&b.hrs&&!b.notified&&now>=b.last+b.hrs*3600e3){b.notified=1;sv('l1boss',BOSS);try{new Notification('首領可能出現了：'+mobName(m))}catch(e){}}})}},1000);
-/* ===== 省電模式（降低手機發熱）===== */
+/* ===== 畫質／省電模式（提高畫質渲染、降低手機發熱）===== */
 const IN_BM=document!==window.document,WD=window.document;
-let POW=Object.assign({fps:0,q:0,calm:false,auto:true},ld('l1pow',{})),powCC=null,powFound=false,powOrig=null,dprDesc=null,blackEl=null;
-const POW_FPS=[[0,'原始'],[30,'30'],[20,'20'],[15,'15']],POW_Q=[[0,'原始'],[1.5,'中'],[1,'低'],[.75,'極低']];
+let POW=Object.assign({fps:0,q:0,hq:0,vivid:false,smooth:false,calm:false,auto:true},ld('l1pow',{})),powCC=null,powFound=false,powOrig=null,dprDesc=null,blackEl=null;
+const POW_FPS=[[0,'原始'],[30,'30'],[20,'20'],[15,'15']],POW_Q=[[0,'原始'],[1.5,'中'],[1,'低'],[.75,'極低']],POW_HQ=[[0,'原始'],[1,'高'],[1.5,'超高'],[2,'極致']];
+let hqOrig=null,hqInfo='';
 async function powFind(){if(powFound)return powCC;powFound=true;
   const ok=o=>o&&o.game&&typeof o.game.frameRate!=='undefined';
   try{if(ok(window.cc))return powCC=window.cc}catch(e){}
@@ -1114,9 +1115,23 @@ function powSetDPR(v){try{
   if(v)Object.defineProperty(window,'devicePixelRatio',{get:()=>v,configurable:true});
   else if(Object.getOwnPropertyDescriptor(window,'devicePixelRatio')){if(dprDesc.configurable!==false&&Object.getOwnPropertyDescriptor(window,'devicePixelRatio').get!==dprDesc.get)Object.defineProperty(window,'devicePixelRatio',Object.assign({},dprDesc,{configurable:true}))}
   powKick();return true}catch(e){return false}}
+/* 提高畫質：解除引擎 2 倍上限，以「手機原始倍率 × 倍數」渲染（超取樣），並依 GPU 上限自動封頂 */
+function hqMaxSide(cv){let m=4096;try{const gl=cv.getContext('webgl2')||cv.getContext('webgl')||cv.getContext('experimental-webgl');if(gl){m=Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE)||m,(gl.getParameter(gl.MAX_VIEWPORT_DIMS)||[m])[0]||m)}}catch(e){}return Math.max(1024,m)}
+function hqTarget(){const nat=+realDPR()||1;if(!POW.hq)return 0;const cv=powCanvas();let want=nat*POW.hq;
+  if(cv){const w=Math.max(1,cv.clientWidth),h=Math.max(1,cv.clientHeight),side=hqMaxSide(cv),
+    capSide=side/Math.max(w,h),capPx=Math.sqrt(9e6/(w*h));/* 每張最多約 900 萬像素，避免 iPhone/低階 GPU 崩潰 */
+    const cap=Math.min(capSide,capPx);hqInfo=want>cap?`（已依 GPU 上限封頂為 ${cap.toFixed(2)} 倍）`:'';want=Math.min(want,cap)}
+  return Math.max(1,Math.round(want*100)/100)}
+function hqEngine(on,dpr){const cc=powCC||window.cc,v=cc&&cc.view;if(!v)return;
+  try{if(hqOrig==null)hqOrig={max:v._maxPixelRatio,ret:v.isRetinaEnabled?v.isRetinaEnabled():null,aa:v.isAntiAliasEnabled?v.isAntiAliasEnabled():null};
+    if(on){if(typeof v._maxPixelRatio==='number'&&v._maxPixelRatio<dpr)v._maxPixelRatio=Math.ceil(dpr);if(v.enableRetina)v.enableRetina(true)}
+    else{if(hqOrig.max!=null)v._maxPixelRatio=hqOrig.max;if(v.enableRetina&&hqOrig.ret!=null)v.enableRetina(hqOrig.ret)}
+    if(v.enableAntiAlias&&hqOrig.aa!=null)v.enableAntiAlias(POW.smooth?true:hqOrig.aa)}catch(e){}}
+function hqCSS(){const cv=powCanvas();if(!cv)return;try{cv.style.filter=POW.vivid?'contrast(1.06) saturate(1.15) brightness(1.02)':'';cv.style.imageRendering=POW.hq?'auto':''}catch(e){}}
 function powFPS(n){const cc=powCC;if(!cc)return false;try{if(powOrig==null)powOrig=cc.game.frameRate||60;cc.game.frameRate=n||powOrig;return true}catch(e){return false}}
 function powCalm(on){const w=document.getElementById('tabTool').closest('.wrap')||document.getElementById('tabTool').parentNode;w&&w.classList.toggle('calm',!!on)}
-async function powApply(){powCalm(POW.calm);if(!IN_BM)return;await powFind();powFPS(blackEl?5:POW.fps);powSetDPR(POW.q)}
+async function powApply(){powCalm(POW.calm);if(!IN_BM)return;await powFind();powFPS(blackEl?5:POW.fps);
+  const t=POW.q?0:hqTarget();hqEngine(!!t,t);powSetDPR(POW.q||t);hqCSS()}
 function powBlack(){if(!IN_BM){showToast('請在遊戲畫面上用書籤開啟');return}
   if(blackEl)return;blackEl=WD.createElement('div');
   blackEl.style.cssText='position:fixed;inset:0;z-index:2147483647;background:#000;color:#333;display:flex;align-items:flex-end;justify-content:center;padding-bottom:40px;font:14px sans-serif;user-select:none;touch-action:manipulation';
@@ -1125,11 +1140,14 @@ function powBlack(){if(!IN_BM){showToast('請在遊戲畫面上用書籤開啟')
   WD.documentElement.appendChild(blackEl);powFPS(5)}
 function renderPow(){const el=document.getElementById('tvPow');if(!el)return;
   const cv=IN_BM?powCanvas():null,seg=(k,list)=>`<div class="pseg">${list.map(([v,l])=>`<button class="go" data-pk="${k}" data-pv="${v}" aria-pressed="${POW[k]===v}">${l}</button>`).join('')}</div>`;
-  el.innerHTML=`<p class="ms" style="white-space:normal">手機發熱主要來自「每秒畫幾張」和「每張畫多細」。這裡可以把遊戲降到 30 幀、降低畫面解析度，掛機時還能黑屏。設定會記住，下次點書籤自動套用。</p>
-  ${IN_BM?`<div class="pstat">遊戲引擎：<b>${powCC?'已連上，可鎖幀數':powFound?'找不到（只能調畫質）':'偵測中…'}</b><br>遊戲畫布：<b>${cv?cv.width+'×'+cv.height:'找不到'}</b>${cv?`（顯示 ${Math.round(cv.clientWidth)}×${Math.round(cv.clientHeight)}，手機原始倍率 ${(+realDPR()).toFixed(2)}）`:''}</div>`:'<div class="pstat">⚠ 這頁不是遊戲畫面。請在<b>樂園遊戲頁</b>點「天堂路線」書籤，再到這裡設定，才會作用在遊戲上。</div>'}
-  <div class="prow"><button class="go" data-pp="eco">🍃 省電建議（30 幀＋中畫質）</button><button class="go" data-pp="max">❄ 極省（20 幀＋低畫質）</button><button class="go" data-pp="off">還原原始</button></div>
+  el.innerHTML=`<p class="ms" style="white-space:normal"><b>想要更清晰</b>：用「提高畫質渲染」，遊戲會用手機螢幕的完整解析度（甚至更高）來畫，文字和人物邊緣更銳利，但會比較耗電發熱。<br><b>想要省電</b>：手機發熱主要來自「每秒畫幾張」和「每張畫多細」。這裡可以把遊戲降到 30 幀、降低畫面解析度，掛機時還能黑屏。設定會記住，下次點書籤自動套用。</p>
+  ${IN_BM?`<div class="pstat">遊戲引擎：<b>${powCC?'已連上，可鎖幀數':powFound?'找不到（只能調畫質）':'偵測中…'}</b><br>遊戲畫布：<b>${cv?cv.width+'×'+cv.height:'找不到'}</b>${cv?`（顯示 ${Math.round(cv.clientWidth)}×${Math.round(cv.clientHeight)}，手機原始倍率 ${(+realDPR()).toFixed(2)}，<b>目前渲染倍率 ${(cv.width/Math.max(1,cv.clientWidth)).toFixed(2)}</b>）${POW.hq?hqInfo:''}`:''}</div>`:'<div class="pstat">⚠ 這頁不是遊戲畫面。請在<b>樂園遊戲頁</b>點「天堂路線」書籤，再到這裡設定，才會作用在遊戲上。</div>'}
+  <div class="prow"><button class="go" data-pp="eco">🍃 省電建議（30 幀＋中畫質）</button><button class="go" data-pp="max">❄ 極省（20 幀＋低畫質）</button><button class="go" data-pp="hd">✨ 高畫質（超高＋色彩增強）</button><button class="go" data-pp="off">還原原始</button></div>
   <h4 class="ph">每秒幀數 ${powCC||!IN_BM?'':'<small>（找不到引擎，無法調整）</small>'}</h4>${seg('fps',POW_FPS)}
-  <h4 class="ph">畫質（解析度）</h4>${seg('q',POW_Q)}
+  <h4 class="ph">✨ 提高畫質渲染 <small>（高＝螢幕原生解析度；超高／極致＝超取樣，更細但更燙）</small></h4>${seg('hq',POW_HQ)}
+  <label class="pchk"><input type="checkbox" data-pc="vivid" ${POW.vivid?'checked':''}> 色彩增強（對比、飽和度微調，畫面更鮮明）</label>
+  <label class="pchk"><input type="checkbox" data-pc="smooth" ${POW.smooth?'checked':''}> 平滑貼圖（放大時邊緣較柔和，不喜歡可關）</label>
+  <h4 class="ph">🍃 降低畫質（省電）</h4>${seg('q',POW_Q)}
   <label class="pchk"><input type="checkbox" data-pc="calm" ${POW.calm?'checked':''}> 關閉本工具的動畫（路線流動線、位置閃爍）</label>
   <label class="pchk"><input type="checkbox" data-pc="auto" ${POW.auto?'checked':''}> 每次點書籤自動套用</label>
   <button class="go" data-pp="black" style="align-self:flex-start">🌑 黑屏掛機（畫面全黑、降到 5 幀，連點兩下回來）</button>
@@ -1139,15 +1157,15 @@ function renderPow(){const el=document.getElementById('tvPow');if(!el)return;
   <li><b>螢幕解析度</b>：Samsung 等手機可在「設定 → 顯示 → 螢幕解析度」改 FHD+。</li>
   <li>調低亮度、拔掉手機殼、不要邊充電邊玩、不要放在棉被或枕頭上。</li>
   <li>關掉其他瀏覽器分頁與背景 App；長時間掛機改用遊戲的「離線掛機」，直接關掉網頁最省。</li></ol>
-  <p class="note">畫質調低後遊戲會稍微模糊，屬正常。若畫面錯位，按「還原原始」或重新整理遊戲頁即可恢復。</p>`;
+  <p class="note">「提高畫質」和「降低畫質」只能擇一，選了一邊另一邊會自動回到原始。提高畫質後若手機很燙或卡頓，改回「高」或「原始」。畫質調低後遊戲會稍微模糊，屬正常。若畫面錯位，按「還原原始」或重新整理遊戲頁即可恢復。</p>`;
   if(IN_BM&&!powFound)powFind().then(()=>renderPow())}
 document.getElementById('tvPow')&&document.getElementById('tvPow').addEventListener('click',e=>{const t=e.target;
-  const s=t.closest('[data-pk]');if(s){POW[s.dataset.pk]=+s.dataset.pv;sv('l1pow',POW);powApply().then(()=>setTimeout(renderPow,250));return}
+  const s=t.closest('[data-pk]');if(s){POW[s.dataset.pk]=+s.dataset.pv;if(s.dataset.pk==='hq'&&POW.hq)POW.q=0;if(s.dataset.pk==='q'&&POW.q)POW.hq=0;sv('l1pow',POW);powApply().then(()=>setTimeout(renderPow,250));return}
   const p=t.closest('[data-pp]');if(p){const a=p.dataset.pp;if(a==='black'){powBlack();return}
-    Object.assign(POW,a==='eco'?{fps:30,q:1.5}:a==='max'?{fps:20,q:1}:{fps:0,q:0});sv('l1pow',POW);powApply().then(()=>setTimeout(renderPow,250));showToast(a==='off'?'已還原':'已套用');return}});
-document.getElementById('tvPow')&&document.getElementById('tvPow').addEventListener('change',e=>{const c=e.target.closest('[data-pc]');if(c){POW[c.dataset.pc]=c.checked;sv('l1pow',POW);powCalm(POW.calm)}});
+    Object.assign(POW,a==='eco'?{fps:30,q:1.5,hq:0,vivid:false}:a==='max'?{fps:20,q:1,hq:0,vivid:false}:a==='hd'?{fps:0,q:0,hq:1.5,vivid:true}:{fps:0,q:0,hq:0,vivid:false,smooth:false});sv('l1pow',POW);powApply().then(()=>setTimeout(renderPow,250));showToast(a==='off'?'已還原':'已套用');return}});
+document.getElementById('tvPow')&&document.getElementById('tvPow').addEventListener('change',e=>{const c=e.target.closest('[data-pc]');if(c){POW[c.dataset.pc]=c.checked;sv('l1pow',POW);if(c.dataset.pc==='vivid'||c.dataset.pc==='smooth'){powApply().then(()=>setTimeout(renderPow,250))}else powCalm(POW.calm)}});
 if(POW.calm)powCalm(true);
-if(IN_BM&&POW.auto&&(POW.fps||POW.q))powApply();
+if(IN_BM&&POW.auto&&(POW.fps||POW.q||POW.hq||POW.vivid||POW.smooth))powApply();
 function renderTool(){['goal','enh','boss','pow'].forEach(v=>{document.getElementById('tv'+v[0].toUpperCase()+v.slice(1)).hidden=toolView!==v});[['tsGoal','goal'],['tsEnh','enh'],['tsBoss','boss'],['tsPow','pow']].forEach(([id,v])=>document.getElementById(id).setAttribute('aria-selected',toolView===v));
   if(toolView==='goal')renderGoal();else if(toolView==='enh')renderEnh();else if(toolView==='pow')renderPow();else renderBoss()}
 document.getElementById('tbTool').addEventListener('click',()=>showTab('tool'));

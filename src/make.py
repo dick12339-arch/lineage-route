@@ -61,7 +61,7 @@ c += """
 .win.compact .st-d{font-size:13px}
 """
 html = ('<button class="fab" aria-label="展開天堂路線" title="天堂路線（可拖曳）">⚔</button>'
- '<div class="win" role="dialog" aria-label="天堂路線指引"><div class="bar"><b>天堂路線 v2.11</b><span>'
+ '<div class="win" role="dialog" aria-label="天堂路線指引"><div class="bar"><b>天堂路線 v2.12</b><span>'
  '<button data-a="size" title="切換大小">小</button>'
  '<button data-a="ghost" aria-pressed="false" title="半透明，可點到後面畫面">透明</button>'
  '<button data-a="min" title="收合成按鈕" aria-label="收合">—</button>'
