@@ -302,7 +302,7 @@ ul.moblist li:first-child{border-top:0}
 <style>body{margin:0}[hidden]{display:none!important}</style></head><body><div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="ver">v2.17 · 2026-11-16</span>
+    <span class="ver">v2.18 · 2026-11-18</span>
   </header>
 
   <div class="main">
@@ -412,17 +412,19 @@ ul.moblist li:first-child{border-top:0}
         <p class="note">資料：樂園怪物查詢；數字不對可按「修改配方」修正。</p>
       </div>
       <div class="tab" id="tabTool" role="tabpanel" hidden>
-        <div class="tabs" role="tablist" style="grid-template-columns:repeat(5,minmax(0,1fr))">
+        <div class="tabs" role="tablist" style="grid-template-columns:repeat(6,minmax(0,1fr))">
           <button id="tsGoal" aria-selected="true">目標</button>
           <button id="tsEnh" aria-selected="false">強化</button>
           <button id="tsBoss" aria-selected="false">首領</button>
           <button id="tsEvt" aria-selected="false">活動</button>
+          <button id="tsMemo" aria-selected="false">記憶</button>
           <button id="tsPow" aria-selected="false">畫質</button>
         </div>
         <div id="tvGoal" class="tab"></div>
         <div id="tvEnh" class="tab" hidden></div>
         <div id="tvBoss" class="tab" hidden></div>
         <div id="tvEvt" class="tab" hidden></div>
+        <div id="tvMemo" class="tab" hidden></div>
         <div id="tvPow" class="tab" hidden></div>
       </div>
       <div class="tab" id="tabLog" role="tabpanel" hidden>
@@ -1194,6 +1196,44 @@ document.getElementById('tvEvt').addEventListener('click',e=>{const t=e.target,$
     arr.forEach((x,i)=>EVT.list.push({id:(Date.now()+i).toString(36),on:true,n:String(x.n).slice(0,30),times:x.times.filter(s=>evHM(s)!=null),days:(x.days||[]).filter(d=>d>=0&&d<7),dur:+x.dur||0,lead:+x.lead||0,node:byId[x.node]?x.node:'',note:String(x.note||'').slice(0,40)}));
     evSave();renderEvt();showToast(`已匯入 ${arr.length} 個活動`)}catch(x){showToast('匯入失敗：請貼上「匯出」的完整文字')}return}});
 document.getElementById('tvEvt').addEventListener('change',e=>{const c=e.target.closest('[data-evo]');if(c){EVT[c.dataset.evo]=c.checked;evSave()}});
+/* ===== 共用記憶點（遊戲記憶座標存在伺服器、綁角色，這裡存一份所有角色共用的清單）===== */
+let MEMO=Object.assign({list:[]},ld('l1memo',{})),memoEdit=null;
+function memoMap(l){if(l.id===0)return 'ti';if(l.id===4)return 'main';if(l.id!=null)return MAPS['m'+l.id]?'m'+l.id:null;return inMap('main',l.x,l.y)?'main':inMap('ti',l.x,l.y)?'ti':'main'}
+function memoNode(o){if(!o.m||!MAPS[o.m])return null;if(o.m==='main'||o.m==='ti'){let b=null,bd=1e9;N.forEach(n=>{if(nodeMap(n)!==o.m)return;const d=dist(n,o);if(d<bd){bd=d;b=n}});return b?{n:b,d:bd}:null}
+  const e=MAPS[o.m].entry;return e&&byId[e]?{n:byId[e],d:null}:null}
+function memoSave(){sv('l1memo',MEMO)}
+function memoLoc(o){return `${o.x} ${o.y}${o.m&&o.m!=='main'&&o.m!=='ti'&&MAPS[o.m]?' '+MAPS[o.m].id:''}`}
+function renderMemo(){const el=document.getElementById('tvMemo'),e=memoEdit?MEMO.list.find(x=>x.id===memoEdit):null;
+  el.innerHTML=`<p class="ms" style="white-space:normal">遊戲的記憶座標綁在角色上，這裡存一份<b>所有角色共用</b>的清單：導航過去，到了在遊戲裡記憶一次就好。</p>
+   <div class="rc"><div class="evform">
+    <label class="full">名稱<input class="inp" id="mmN" value="${esc(e?e.n:'')}" placeholder="例：奇岩倉庫前、龍谷入口" maxlength="30"></label>
+    <label class="full">座標（/loc 顯示的數字；地監後面加地圖編號）<input class="inp" id="mmL" value="${esc(e?memoLoc(e):'')}" placeholder="例：33430 32815" inputmode="numeric"></label>
+    <label class="full">備註（可選）<input class="inp" id="mmNote" value="${esc(e&&e.note||'')}" placeholder="例：傳送師旁、掛機點" maxlength="40"></label>
+    <div class="full" style="display:flex;gap:6px;flex-wrap:wrap"><button class="go" id="mmMe">📍 用我的位置</button><button class="go" id="mmSave">${e?'儲存修改':'加入清單'}</button>${e?'<button class="go" id="mmCancel">取消</button><button class="go" id="mmDel" style="border-color:var(--to);color:var(--to)">刪除</button>':''}</div>
+   </div></div>
+   <div class="rc"><h4 class="ph" style="margin:0 0 4px">記憶點（${MEMO.list.length}）</h4>${MEMO.list.length?MEMO.list.map((o,i)=>{const nn=memoNode(o),d=me&&me.m===o.m?Math.max(Math.abs(o.x-me.x),Math.abs(o.y-me.y)):null;
+     return `<div class="evrow"><div style="min-width:0"><b>${esc(o.n)}</b>${d!=null?` <span class="npcd" style="color:var(--gold);font-size:12px;font-weight:700">${d<3?'就在這裡':'約 '+d+' 格・往'+dir(me,o)}</span>`:''}
+       <span class="ms" style="display:block;white-space:normal">${MAPS[o.m]?esc(MAPS[o.m].name):'未知地圖'} <span class="coord" data-c="${memoLoc(o)}">(${o.x}, ${o.y})</span>${nn&&nn.d!=null?`・近 ${esc(nn.n.n.replace(/（.*）/,''))}`:''}${o.note?'・'+esc(o.note):''}</span></div>
+       <div class="evbtns">${i?`<button class="go" data-mmup="${o.id}" aria-label="往上移">▲</button>`:''}<button class="go" data-mmmap="${o.id}">地圖</button>${nn?`<button class="go" data-mmgo="${o.id}">導航</button>`:''}<button class="go" data-mmed="${o.id}">編輯</button></div></div>`}).join('')
+     :'<p class="ms" style="white-space:normal;padding:6px 0">還沒有記憶點。在地圖下方輸入 /loc 標示位置後，按「用我的位置」就能快速加入。</p>'}</div>
+   <div class="rc"><h4 class="ph" style="margin:0 0 6px">分享／備份</h4><textarea class="inp" id="mmIO" rows="3" placeholder="按「匯出」複製後傳給盟友；收到的文字貼在這裡按「匯入」"></textarea>
+    <div style="display:flex;gap:6px;margin-top:6px"><button class="go" id="mmExp">匯出</button><button class="go" id="mmImp">匯入（加入現有）</button></div></div>`}
+document.getElementById('tvMemo').addEventListener('click',ev=>{const t=ev.target,$=id=>document.getElementById(id),find=id=>MEMO.list.find(x=>x.id===id);
+  if(t.closest('#mmMe')){if(!me){showToast('先在地圖下方輸入 /loc 座標，按「標示我的位置」');return}$('mmL').value=memoLoc(me);if(!$('mmN').value.trim()&&me.near&&byId[me.near])$('mmN').value=byId[me.near].n.replace(/（.*）/,'')+'附近';$('mmN').focus();return}
+  if(t.closest('#mmSave')){const n=$('mmN').value.trim(),l=parseLoc($('mmL').value);if(!n){showToast('請填名稱');return}if(!l){showToast('座標請填兩組 5 位數，例如 33430 32815');return}
+    const m=memoMap(l);if(!m){showToast('工具裡沒有這個地圖編號，仍會存起來但無法在地圖上顯示')}
+    const o={n,x:l.x,y:l.y,m,note:$('mmNote').value.trim()};if(memoEdit)Object.assign(find(memoEdit),o);else MEMO.list.push(Object.assign({id:Date.now().toString(36)},o));
+    memoSave();showToast(memoEdit?'已更新':'已加入：'+n);memoEdit=null;renderMemo();return}
+  if(t.closest('#mmCancel')){memoEdit=null;renderMemo();return}
+  if(t.closest('#mmDel')){MEMO.list=MEMO.list.filter(x=>x.id!==memoEdit);memoEdit=null;memoSave();renderMemo();showToast('已刪除');return}
+  const up=t.closest('[data-mmup]');if(up){const i=MEMO.list.findIndex(x=>x.id===up.dataset.mmup);if(i>0){[MEMO.list[i-1],MEMO.list[i]]=[MEMO.list[i],MEMO.list[i-1]];memoSave();renderMemo()}return}
+  const ed=t.closest('[data-mmed]');if(ed){memoEdit=ed.dataset.mmed;renderMemo();$('mmN').scrollIntoView&&$('mmN').scrollIntoView({block:'center'});return}
+  const mp=t.closest('[data-mmmap]');if(mp){const o=find(mp.dataset.mmmap);if(!o||!MAPS[o.m]){showToast('這個地圖工具裡沒有');return}setHL({pts:[{m:o.m,x:o.x,y:o.y}],label:o.n,map:o.m},true);showMap();return}
+  const g=t.closest('[data-mmgo]');if(g){const o=find(g.dataset.mmgo),nn=o&&memoNode(o);if(!nn)return;toSel.value=nn.n.id;showTab('route');render();setHL({pts:[{m:o.m,x:o.x,y:o.y}],label:o.n,map:o.m},false);showMap();showToast('目的地：'+nn.n.n+'（'+o.n+'）');return}
+  if(t.closest('#mmExp')){const io=$('mmIO');io.value=JSON.stringify({l1memo:1,list:MEMO.list.map(({id,...r})=>r)});io.select();try{navigator.clipboard.writeText(io.value).then(()=>showToast('記憶點已複製'),()=>showToast('請長按複製'))}catch(x){showToast('請長按複製')}return}
+  if(t.closest('#mmImp')){try{const d=JSON.parse($('mmIO').value.trim()),arr=(d.list||[]).filter(x=>x&&x.n&&+x.x>9999&&+x.y>9999);if(!arr.length)throw 0;let k=0;
+    arr.forEach((x,i)=>{if(MEMO.list.some(y=>y.x===+x.x&&y.y===+x.y&&y.m===x.m))return;MEMO.list.push({id:(Date.now()+i).toString(36),n:String(x.n).slice(0,30),x:+x.x,y:+x.y,m:MAPS[x.m]?x.m:'main',note:String(x.note||'').slice(0,40)});k++});
+    memoSave();renderMemo();showToast(k?`已匯入 ${k} 個記憶點`:'都已經在清單裡了')}catch(x){showToast('匯入失敗：請貼上「匯出」的完整文字')}return}});
 /* ===== 畫質／省電模式（提高畫質渲染、降低手機發熱）===== */
 const IN_BM=document!==window.document,WD=window.document;
 let POW=Object.assign({fps:0,q:0,hq:0,vivid:false,smooth:false,calm:false,auto:true},ld('l1pow',{})),powCC=null,powFound=false,powOrig=null,dprDesc=null,blackEl=null;
@@ -1267,10 +1307,10 @@ document.getElementById('tvPow')&&document.getElementById('tvPow').addEventListe
 document.getElementById('tvPow')&&document.getElementById('tvPow').addEventListener('change',e=>{const c=e.target.closest('[data-pc]');if(c){POW[c.dataset.pc]=c.checked;sv('l1pow',POW);if(c.dataset.pc==='vivid'||c.dataset.pc==='smooth'){powApply().then(()=>setTimeout(renderPow,250))}else powCalm(POW.calm)}});
 if(POW.calm)powCalm(true);
 if(IN_BM&&POW.auto&&(POW.fps||POW.q||POW.hq||POW.vivid||POW.smooth))powApply();
-function renderTool(){['goal','enh','boss','evt','pow'].forEach(v=>{document.getElementById('tv'+v[0].toUpperCase()+v.slice(1)).hidden=toolView!==v});[['tsGoal','goal'],['tsEnh','enh'],['tsBoss','boss'],['tsEvt','evt'],['tsPow','pow']].forEach(([id,v])=>document.getElementById(id).setAttribute('aria-selected',toolView===v));
-  if(toolView==='goal')renderGoal();else if(toolView==='enh')renderEnh();else if(toolView==='pow')renderPow();else if(toolView==='evt')renderEvt();else renderBoss()}
+function renderTool(){['goal','enh','boss','evt','memo','pow'].forEach(v=>{document.getElementById('tv'+v[0].toUpperCase()+v.slice(1)).hidden=toolView!==v});[['tsGoal','goal'],['tsEnh','enh'],['tsBoss','boss'],['tsEvt','evt'],['tsMemo','memo'],['tsPow','pow']].forEach(([id,v])=>document.getElementById(id).setAttribute('aria-selected',toolView===v));
+  if(toolView==='goal')renderGoal();else if(toolView==='enh')renderEnh();else if(toolView==='pow')renderPow();else if(toolView==='evt')renderEvt();else if(toolView==='memo')renderMemo();else renderBoss()}
 document.getElementById('tbTool').addEventListener('click',()=>showTab('tool'));
-[['tsGoal','goal'],['tsEnh','enh'],['tsBoss','boss'],['tsEvt','evt'],['tsPow','pow']].forEach(([id,v])=>document.getElementById(id).addEventListener('click',()=>{toolView=v;renderTool()}));
+[['tsGoal','goal'],['tsEnh','enh'],['tsBoss','boss'],['tsEvt','evt'],['tsMemo','memo'],['tsPow','pow']].forEach(([id,v])=>document.getElementById(id).addEventListener('click',()=>{toolView=v;renderTool()}));
 const TT=document.getElementById('tabTool');
 TT.addEventListener('click',e=>{const t=e.target;
   const it=t.closest('[data-it]');if(it){itQty=1;openItem(it.dataset.it);return}
