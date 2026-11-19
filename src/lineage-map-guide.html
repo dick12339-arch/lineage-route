@@ -162,6 +162,7 @@ ul.moblist li:first-child{border-top:0}
 .locbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 10px;border-top:1px solid var(--line);background:var(--panel)}
 .locbar .inp{flex:1 1 200px;min-width:0;padding:8px 10px;font-size:15px}
 .locinfo{flex:1 1 100%;font-size:12.5px;color:var(--mute)}
+#locAuto[aria-pressed="true"]{background:var(--gold);color:#1a140a}.autost{display:block;font-size:11.5px;color:var(--mute)}
 .locinfo b{color:var(--ink)}
 .mapover .node circle{stroke:#120e09;stroke-width:2.5}
 .mapover .n-town circle{fill:var(--gold)}
@@ -303,7 +304,7 @@ ul.moblist li:first-child{border-top:0}
 <div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="ver">v2.18 · 2026-11-18</span>
+    <span class="ver">v2.19 · 2026-11-19</span>
   </header>
 
   <div class="main">
@@ -339,6 +340,7 @@ ul.moblist li:first-child{border-top:0}
       <div class="locbar">
         <input class="inp" id="locIn" inputmode="numeric" placeholder="輸入 /loc 座標，例：33430 32815（地監加地圖編號）" autocomplete="off">
         <button class="go" id="locGo">標示我的位置</button>
+        <button class="go" id="locAuto" hidden aria-pressed="false">🛰 自動定位</button>
         <button class="go" id="locFrom" hidden>從這裡出發</button>
         <span class="locinfo" id="locInfo"></span>
       </div>
@@ -1205,7 +1207,7 @@ function memoNode(o){if(!o.m||!MAPS[o.m])return null;if(o.m==='main'||o.m==='ti'
 function memoSave(){sv('l1memo',MEMO)}
 function memoLoc(o){return `${o.x} ${o.y}${o.m&&o.m!=='main'&&o.m!=='ti'&&MAPS[o.m]?' '+MAPS[o.m].id:''}`}
 function renderMemo(){const el=document.getElementById('tvMemo'),e=memoEdit?MEMO.list.find(x=>x.id===memoEdit):null;
-  el.innerHTML=`<p class="ms" style="white-space:normal">遊戲的記憶座標綁在角色上，這裡存一份<b>所有角色共用</b>的清單：導航過去，到了在遊戲裡記憶一次就好。</p>
+  el.innerHTML=`<p class="ms" style="white-space:normal">遊戲的記憶座標綁在角色上，這裡存一份<b>所有角色共用</b>的清單：導航過去，到了在遊戲裡記憶一次就好。開著「🛰 自動定位」時，按「用我的位置」就是你現在站的地方。</p>
    <div class="rc"><div class="evform">
     <label class="full">名稱<input class="inp" id="mmN" value="${esc(e?e.n:'')}" placeholder="例：奇岩倉庫前、龍谷入口" maxlength="30"></label>
     <label class="full">座標（/loc 顯示的數字；地監後面加地圖編號）<input class="inp" id="mmL" value="${esc(e?memoLoc(e):'')}" placeholder="例：33430 32815" inputmode="numeric"></label>
@@ -1396,5 +1398,34 @@ renderSpawnBox();
 
 loadImg('main');
 try{const m=JSON.parse(localStorage.getItem('l1me')||'null');if(m&&m.x){document.getElementById('locIn').value=m.x+' '+m.y;me=m;setTimeout(()=>setMe(m,true),0)}}catch(e){}
+/* ===== 自動定位：從遊戲畫面右上角的「地圖名稱＋座標」文字讀出我的位置 ===== */
+let AUTO={on:ld('l1auto',true)!==false,lbl:null,name:null,last:'',miss:0,state:'',tm:null};
+const AUTO_RE=/^\D{0,6}(\d{5})\D{1,4}(\d{5})\D{0,6}$/;
+const AUTO_NM=(()=>{const o={};Object.entries(MAPS).forEach(([k,M])=>{o[M.name.replace(/\s/g,'')]=k});Object.entries(FLOORREG).forEach(([n,k])=>{o[n.replace(/\s/g,'')]=k});o['說話之島']='ti';return o})();
+function autoLabels(cc){const L=cc.Label,out=[];if(!L||!cc.director||!cc.director.getScene)return out;const sc=cc.director.getScene();if(!sc)return out;
+  const st=[sc];let n=0;while(st.length&&n<30000){const nd=st.pop();n++;if(!nd)continue;try{if(nd.activeInHierarchy!==false){const c=nd.getComponent&&nd.getComponent(L);if(c&&typeof c.string==='string'&&c.string)out.push({nd,c})}}catch(e){}
+    const ch=nd.children||[];for(let i=0;i<ch.length;i++)st.push(ch[i])}return out}
+function autoText(c){try{return String(c.string||'').trim()}catch(e){return ''}}
+function autoFind(cc){const ls=autoLabels(cc),hits=ls.filter(l=>AUTO_RE.test(autoText(l.c)));if(!hits.length)return null;
+  /* 優先選旁邊有地圖名稱的那個座標文字 */
+  let best=null,bn=null;for(const h of hits){const sib=(h.nd.parent&&h.nd.parent.children||[]).map(x=>{try{return x.getComponent&&x.getComponent(cc.Label)}catch(e){return null}}).filter(Boolean);
+    const nm=sib.find(c=>c!==h.c&&/[一-鿿]/.test(autoText(c))&&!/\d{3}/.test(autoText(c)));if(nm){best=h;bn=nm;break}if(!best)best=h}
+  return {lbl:best.c,name:bn}}
+function autoUI(){const b=document.getElementById('locAuto');if(!b)return;b.hidden=!IN_BM;b.setAttribute('aria-pressed',AUTO.on);b.textContent=AUTO.on?'🛰 自動定位中':'🛰 自動定位';
+  let st=document.getElementById('autoSt');if(!st){st=WD.createElement('span');st.id='autoSt';st.className='autost';document.getElementById('locInfo').after(st)}
+  st.textContent=!IN_BM||!AUTO.on?'':AUTO.state;st.hidden=!st.textContent}
+async function autoTick(){if(!AUTO.on||!IN_BM)return;const cc=await powFind();if(!cc){AUTO.state='⚠ 找不到遊戲引擎，請手動輸入 /loc';autoUI();return}
+  try{if(!AUTO.lbl||!AUTO.lbl.node||!AUTO.lbl.node.isValid||AUTO.lbl.node.activeInHierarchy===false||!AUTO_RE.test(autoText(AUTO.lbl))){
+      if(AUTO.miss++%6)return;/* 找不到時每 9 秒重掃一次 */
+      const f=autoFind(cc);if(!f){AUTO.lbl=null;AUTO.state='⚠ 畫面上找不到座標（進入遊戲後會自動抓）';autoUI();return}AUTO.lbl=f.lbl;AUTO.name=f.name;AUTO.miss=0}
+    const t=autoText(AUTO.lbl),nm=AUTO.name?autoText(AUTO.name).replace(/\s/g,''):'',key=t+'|'+nm;if(key===AUTO.last)return;
+    const first=!AUTO.last;AUTO.last=key;const m=t.match(AUTO_RE),x=+m[1],y=+m[2];
+    let k=AUTO_NM[nm];if(!k){const hit=Object.keys(AUTO_NM).find(n=>nm&&(nm.includes(n)||n.includes(nm)));k=hit?AUTO_NM[hit]:null}
+    const id=k&&MAPS[k]?MAPS[k].id:null;document.getElementById('locIn').value=x+' '+y+(k&&MAPS[k].dg?' '+id:'');
+    setMe({x,y,id},!first);AUTO.state=`已連上遊戲：${nm||'?'} (${x}, ${y})`;autoUI();
+    if(!document.getElementById('tabTool').hidden&&!document.getElementById('tvMemo').hidden)renderMemo()}catch(e){AUTO.lbl=null;AUTO.state='⚠ 讀取座標失敗，請手動輸入 /loc';autoUI()}}
+function autoStart(){clearInterval(AUTO.tm);autoUI();if(AUTO.on&&IN_BM){AUTO.miss=0;AUTO.last='';AUTO.state='偵測中…';autoUI();autoTick();AUTO.tm=setInterval(autoTick,1500)}}
+document.getElementById('locAuto').addEventListener('click',()=>{AUTO.on=!AUTO.on;sv('l1auto',AUTO.on);autoStart();showToast(AUTO.on?'自動定位已開啟：走動時會自動更新我的位置':'自動定位已關閉，改用手動輸入 /loc')});
+autoStart();
 render();
 </script>
