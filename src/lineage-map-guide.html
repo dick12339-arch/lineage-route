@@ -304,7 +304,7 @@ ul.moblist li:first-child{border-top:0}
 <div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="ver">v2.19 · 2026-11-19</span>
+    <span class="ver">v2.20 · 2026-11-19</span>
   </header>
 
   <div class="main">
@@ -1355,11 +1355,11 @@ function locLookup(loc){
   const ids=[...new Set(pick.flatMap(c=>FIELD_NODES[c.o.id]))];
   const near=N.filter(o=>o.t==='spot'&&nodeMap(o)===m).map(o=>({o,d:dist(o,loc)})).filter(x=>x.d<60).sort((a,b)=>a.d-b.d).slice(0,2);
   return {nodes:pick.map(c=>c.o.id),mapKey:m,title:pick.map(c=>(MOBRN[FIELD_NODES[c.o.id][0]]||[c.o.n])[0]+' 一帶').join('／'),note:`以最近的地區估算（${pick.map(c=>c.o.n+' 約 '+c.d+' 格').join('、')}）；野外資料只分到地區，不分到精確位置。`,mobs:mobsInRegionIds(ids),near}}
-function renderLocMobs(loc){const out=document.getElementById('mobLocOut'),r=locLookup(loc);
+function renderLocMobs(loc,auto){const out=document.getElementById('mobLocOut'),r=locLookup(loc);
   if(r.err){out.innerHTML=`<p class="ms" style="white-space:normal;color:var(--to)">${esc(r.err)}</p>`;return}
   const ms=r.dist?r.mobs.slice():r.mobs.slice().sort((a,b)=>a.l-b.l);
-  const pm=r.floor||r.mapKey;if(pm)setHL({map:pm,pt:{m:pm,x:loc.x,y:loc.y},nodes:r.nodes||[],pts:r.pts||[],label:`(${loc.x}, ${loc.y}) ${r.title}`},true);
-  out.innerHTML=`<div class="sec" style="margin-top:8px"><h3>(${loc.x}, ${loc.y}${loc.id!=null?', '+loc.id:''})：${esc(r.title)}・${ms.length} 種怪</h3>
+  const pm=r.floor||r.mapKey;if(pm&&!auto)setHL({map:pm,pt:{m:pm,x:loc.x,y:loc.y},nodes:r.nodes||[],pts:r.pts||[],label:`(${loc.x}, ${loc.y}) ${r.title}`},true);
+  out.innerHTML=`<div class="sec" style="margin-top:8px"><h3>${auto?'🛰 目前位置 ':''}(${loc.x}, ${loc.y}${loc.id!=null?', '+loc.id:''})：${esc(r.title)}・${ms.length} 種怪</h3>
     <div class="ms" style="white-space:normal">${esc(r.note)}</div>
     <div class="destmobs" style="margin-top:6px"><button data-showmap="1">📍 在地圖上看</button></div>${r.near&&r.near.length?`<div class="destmobs" style="margin-top:6px"><span>附近入口：</span>${r.near.map(x=>`<button data-go="${x.o.id}">${esc(x.o.n)} 約 ${x.d} 格</button>`).join('')}</div>`:''}
     ${r.floor||r.entry?`<div class="destmobs" style="margin-top:6px">${r.floor?`<button data-floor="${r.floor}">🗺 看這層地圖</button>`:''}${r.entry&&byId[r.entry]?`<button data-go="${r.entry}">導航到入口 ➜</button>`:''}</div>`:''}
@@ -1420,11 +1420,14 @@ async function autoTick(){if(!AUTO.on||!IN_BM)return;const cc=await powFind();if
       const f=autoFind(cc);if(!f){AUTO.lbl=null;AUTO.state='⚠ 畫面上找不到座標（進入遊戲後會自動抓）';autoUI();return}AUTO.lbl=f.lbl;AUTO.name=f.name;AUTO.miss=0}
     const t=autoText(AUTO.lbl),nm=AUTO.name?autoText(AUTO.name).replace(/\s/g,''):'',key=t+'|'+nm;if(key===AUTO.last)return;
     const first=!AUTO.last;AUTO.last=key;const m=t.match(AUTO_RE),x=+m[1],y=+m[2];
-    let k=AUTO_NM[nm];if(!k){const hit=Object.keys(AUTO_NM).find(n=>nm&&(nm.includes(n)||n.includes(nm)));k=hit?AUTO_NM[hit]:null}
+    let k=AUTO_NM[nm];if(!k&&nm){const hit=Object.keys(AUTO_NM).filter(n=>nm.includes(n)).sort((a,b)=>b.length-a.length)[0];k=hit?AUTO_NM[hit]:null}/* 只接受「畫面名稱包含地圖名」，避免野外龍之谷被當成龍之谷地監 */
     const id=k&&MAPS[k]?MAPS[k].id:null;document.getElementById('locIn').value=x+' '+y+(k&&MAPS[k].dg?' '+id:'');
-    setMe({x,y,id},!first);AUTO.state=`已連上遊戲：${nm||'?'} (${x}, ${y})`;autoUI();
+    setMe({x,y,id},!first);AUTO.state=`已連上遊戲：${nm||'?'} (${x}, ${y})・怪物分頁同步顯示這裡的怪`;autoUI();autoMobs(x,y,k&&MAPS[k].dg?id:(k==='ti'?0:k==='main'?4:null));
     if(!document.getElementById('tabTool').hidden&&!document.getElementById('tvMemo').hidden)renderMemo()}catch(e){AUTO.lbl=null;AUTO.state='⚠ 讀取座標失敗，請手動輸入 /loc';autoUI()}}
-function autoStart(){clearInterval(AUTO.tm);autoUI();if(AUTO.on&&IN_BM){AUTO.miss=0;AUTO.last='';AUTO.state='偵測中…';autoUI();autoTick();AUTO.tm=setInterval(autoTick,1500)}}
+/* 自動定位時，怪物分頁的「座標查怪」跟著換成目前所在地區的怪（地區或怪物種類變了才重畫，避免閃爍） */
+function autoMobs(x,y,id){try{const l={x,y,id},r=locLookup(l);if(r.err)return;const key=(r.title||'')+'|'+(r.mobs||[]).map(m=>m.k).sort().join(',');
+  document.getElementById('mobLoc').value=x+' '+y+(id!=null&&id!==4&&id!==0?' '+id:'');if(key===AUTO.mobKey)return;AUTO.mobKey=key;renderLocMobs(l,true)}catch(e){}}
+function autoStart(){clearInterval(AUTO.tm);autoUI();if(AUTO.on&&IN_BM){AUTO.miss=0;AUTO.last='';AUTO.mobKey='';AUTO.state='偵測中…';autoUI();autoTick();AUTO.tm=setInterval(autoTick,1500)}}
 document.getElementById('locAuto').addEventListener('click',()=>{AUTO.on=!AUTO.on;sv('l1auto',AUTO.on);autoStart();showToast(AUTO.on?'自動定位已開啟：走動時會自動更新我的位置':'自動定位已關閉，改用手動輸入 /loc')});
 autoStart();
 render();
