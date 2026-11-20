@@ -303,7 +303,7 @@ ul.moblist li:first-child{border-top:0}
 <style>body{margin:0}[hidden]{display:none!important}</style></head><body><div class="wrap">
   <header>
     <h1><small>LINEAGE · 天堂1</small>亞丁大陸路線指引</h1>
-    <span class="ver">v2.21 · 2026-11-20</span>
+    <span class="ver">v2.22 · 2026-11-20</span>
   </header>
 
   <div class="main">
@@ -446,7 +446,7 @@ ul.moblist li:first-child{border-top:0}
         </div>
         <div id="rcCmp"></div>
         <div id="rcOut" class="rcout"></div>
-        <details class="note"><summary style="cursor:pointer">推薦怎麼算？</summary>只列出目前已開放離線掛機的 18 個獵場，危險的排在最後。推薦是依樂園怪物等級、數量、不死系比例與掉落物估算的參考值，不是官方數據。每小時經驗、金幣標「估」的是用怪物等級推算（經驗約為等級²＋1、擊殺速度依你的戰力與怪物等級估），只適合比較地點間的高低；掛過之後按「填實測」輸入真實數字，就會改用實測值。AC 數字越負防禦越高，填 -25 或 25 都可以。首領不計入難度，只在備註提醒。</details>
+        <details class="note"><summary style="cursor:pointer">推薦怎麼算？</summary>只列出目前已開放離線掛機的 19 個獵場，危險的排在最後。推薦是依樂園怪物等級、數量、不死系比例與掉落物估算的參考值，不是官方數據。每小時經驗、金幣標「估」的是用怪物等級推算（經驗約為等級²＋1、擊殺速度依你的戰力與怪物等級估），只適合比較地點間的高低；掛過之後按「填實測」輸入真實數字，就會改用實測值。AC 數字越負防禦越高，填 -25 或 25 都可以。首領不計入難度，只在備註提醒。</details>
       </div>
     </section>
   </div>
@@ -962,7 +962,7 @@ function travelOf(name,cat){if(cat==='野外')return [];const base=name.replace(
   if(APPROACH[key])out.push(APPROACH[key]);if(mm)for(let k=1;k<+mm[2];k++)out.push(`${key} ${k}樓`);return out}
 const VALKEY=['魔法書','精靈水晶','品質','項鍊','戒指','腰帶','斗篷','魔法頭盔','技術書'];
 const RCF={afk:false,safe:false};
-const AFK_OPEN=new Set(['新手獵場','北島獵場','冒險洞窟 1樓 獵場','冒險洞窟 2樓 獵場','眠龍洞穴 1樓 獵場','眠龍洞穴 3樓 獵場','騎士洞穴 1樓 獵場','騎士洞穴 3樓 獵場','騎士洞穴 4樓 獵場','古魯丁地監 1樓 獵場','古魯丁地監 3樓 獵場','古魯丁地監 6樓 獵場','龍之谷地監 1樓 獵場','龍之谷地監 2樓 獵場','奇岩地監 2樓 獵場','奇岩地監 4樓 獵場','火龍窟三叉路獵場','火龍窟外圍獵場']);
+const AFK_OPEN=new Set(['新手獵場','北島獵場','冒險洞窟 1樓 獵場','冒險洞窟 2樓 獵場','眠龍洞穴 1樓 獵場','眠龍洞穴 3樓 獵場','騎士洞穴 1樓 獵場','騎士洞穴 3樓 獵場','騎士洞穴 4樓 獵場','古魯丁地監 1樓 獵場','古魯丁地監 3樓 獵場','古魯丁地監 6樓 獵場','龍之谷地監 1樓 獵場','龍之谷地監 2樓 獵場','奇岩地監 2樓 獵場','奇岩地監 4樓 獵場','火龍窟三叉路獵場','火龍窟外圍獵場','歐吉獵場']);
 function MEAS(){try{return JSON.parse(localStorage.getItem('l1meas')||'{}')}catch(e){return {}}}
 function fmtW(n){n=Math.round(n);return n>=10000?(n/10000).toFixed(n>=100000?0:1)+' 萬':n.toLocaleString('zh-TW')}
 function logGoldPerHr(id){try{const d=JSON.parse(localStorage.getItem('l1log')||'null');if(!d)return null;let h=0,g=0;(d.sessions||[]).forEach(x=>{if(String(x.reg)===String(id)&&x.hrs>0&&x.gold){h+=x.hrs;g+=x.gold}});return h?g/h:null}catch(e){return null}}
